@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAATHCHALO | Smarter Shared Commutes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkTheme: '#0f172a',
+                        brandYellow: '#eab308',
+                        brandYellowLight: '#fef08a'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .hero-bg {
+            background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.8)), url('https://images.unsplash.com/photo-1596726918804-54c3756312a0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') center/cover;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 bg-darkTheme/95 backdrop-blur-sm shadow-lg transition-all">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-20 items-center">
+                <div class="flex-shrink-0 flex items-center gap-2">
+                    <i class="fa-solid fa-route text-brandYellow text-2xl"></i>
+                    <span class="font-bold text-2xl tracking-tight text-white">SAATH<span class="text-brandYellow">CHALO</span></span>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <a href="#problem" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">The Problem</a>
+                    <a href="#solution" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Solution</a>
+                    <a href="#how-it-works" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">How it Works</a>
+                    <a href="#impact" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Impact</a>
+                </div>
+                <div class="hidden md:flex">
+                    <a href="#solution" class="bg-brandYellow text-darkTheme px-6 py-2 rounded-full font-bold hover:bg-yellow-400 transition-colors shadow-lg hover:shadow-yellow-500/20">Try Prototype</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-bg min-h-screen flex items-center relative pt-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-20">
+            <div class="max-w-3xl">
+                <div class="inline-block border-b-2 border-brandYellow mb-6">
+                    <p class="text-brandYellow font-semibold tracking-widest uppercase text-sm mb-1">Design Thinking Project</p>
+                </div>
+                <h1 class="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-6">
+                    What if <span class="text-brandYellow">Empty Seats</span> <br>
+                    could become <br>
+                    <span class="text-brandYellow">Affordable Rides?</span>
+                </h1>
+                <p class="text-xl md:text-2xl text-gray-300 mb-8 font-light">
+                    Ek Raah, Kai Manzilein | Smarter • Safer • Shared Commutes
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a href="#solution" class="bg-brandYellow text-darkTheme text-center px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-400 transition-colors shadow-lg hover:shadow-yellow-500/30">
+                        Explore the Solution
+                    </a>
+                    <a href="#problem" class="border-2 border-gray-400 text-white text-center px-8 py-4 rounded-full font-bold text-lg hover:border-brandYellow hover:text-brandYellow transition-colors">
+                        Understand the Problem
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- The Problem Section -->
+    <section id="problem" class="py-24 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-sm font-bold text-gray-500 tracking-widest uppercase mb-2 border-b-2 border-brandYellow inline-block pb-1">The Real Problem</h2>
+                <h3 class="text-4xl font-extrabold text-darkTheme mb-4">Same commute. <span class="text-brandYellow">Rising friction.</span></h3>
+                <p class="text-xl text-gray-600 italic">"From college gate to home — a long, uncertain and costly journey."</p>
+            </div>
+
+            <!-- The Journey -->
+            <div class="relative max-w-5xl mx-auto mb-20">
+                <div class="absolute inset-0 flex items-center justify-center z-0 hidden md:flex">
+                    <div class="w-full h-1 bg-gray-200"></div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-8 relative z-10">
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-20 h-20 bg-white border-4 border-gray-200 rounded-full flex items-center justify-center text-2xl text-darkTheme mb-4 shadow-sm">
+                            <i class="fa-solid fa-school"></i>
+                        </div>
+                        <h4 class="font-bold">1. College Ends</h4>
+                        <p class="text-sm text-gray-500">Classes over, rush outside</p>
+                    </div>
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-20 h-20 bg-white border-4 border-yellow-300 rounded-full flex items-center justify-center text-2xl text-darkTheme mb-4 shadow-sm">
+                            <i class="fa-solid fa-mobile-screen"></i>
+                        </div>
+                        <h4 class="font-bold">2. Search</h4>
+                        <p class="text-sm text-gray-500">Opens apps / looks around</p>
+                    </div>
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-20 h-20 bg-white border-4 border-gray-200 rounded-full flex items-center justify-center text-2xl text-darkTheme mb-4 shadow-sm">
+                            <i class="fa-solid fa-hourglass-half"></i>
+                        </div>
+                        <h4 class="font-bold">3. Wait</h4>
+                        <p class="text-sm text-gray-500">10-20 min average wait</p>
+                    </div>
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-20 h-20 bg-white border-4 border-red-400 rounded-full flex items-center justify-center text-2xl text-red-500 mb-4 shadow-sm">
+                            <i class="fa-solid fa-indian-rupee-sign"></i>
+                        </div>
+                        <h4 class="font-bold">4. Check Price & Negotiate</h4>
+                        <p class="text-sm text-gray-500">Surge pricing & bargaining (Peak Friction)</p>
+                    </div>
+                    <div class="flex flex-col items-center text-center">
+                        <div class="w-20 h-20 bg-white border-4 border-brandYellow rounded-full flex items-center justify-center text-2xl text-darkTheme mb-4 shadow-sm">
+                            <i class="fa-solid fa-house"></i>
+                        </div>
+                        <h4 class="font-bold">5. Travel</h4>
+                        <p class="text-sm text-gray-500">Reaches home, exhausted</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- The 5 Whys -->
+            <div class="bg-darkTheme rounded-3xl p-8 md:p-12 shadow-2xl max-w-4xl mx-auto text-white">
+                <h3 class="text-3xl font-bold mb-8">Why does this keep happening? (5 Whys)</h3>
+                <div class="space-y-4">
+                    <div class="bg-gray-800/50 p-4 rounded-xl border-l-4 border-gray-600 flex flex-col sm:flex-row gap-4">
+                        <div class="font-bold text-brandYellow sm:w-1/3">1. Why is the ride costly?</div>
+                        <div class="text-gray-300 sm:w-2/3">Because there are very few passengers paying the full fare.</div>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 rounded-xl border-l-4 border-gray-600 flex flex-col sm:flex-row gap-4">
+                        <div class="font-bold text-brandYellow sm:w-1/3">2. Why few passengers?</div>
+                        <div class="text-gray-300 sm:w-2/3">There is no way to find people going in the exact same direction.</div>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 rounded-xl border-l-4 border-gray-600 flex flex-col sm:flex-row gap-4">
+                        <div class="font-bold text-brandYellow sm:w-1/3">3. Why is there no way?</div>
+                        <div class="text-gray-300 sm:w-2/3">Current apps are car-centric, not built for auto-sharing at a micro-level.</div>
+                    </div>
+                    <div class="bg-gray-800/50 p-4 rounded-xl border-l-4 border-gray-600 flex flex-col sm:flex-row gap-4">
+                        <div class="font-bold text-brandYellow sm:w-1/3">4. Why not solved yet?</div>
+                        <div class="text-gray-300 sm:w-2/3">There is no real-time, dynamic route matching optimized for autos.</div>
+                    </div>
+                    <div class="bg-gray-800/50 p-6 rounded-xl border-l-4 border-brandYellow mt-6">
+                        <div class="font-bold text-brandYellow uppercase tracking-wider mb-2"><i class="fa-solid fa-bolt mr-2"></i>Root Cause</div>
+                        <div class="text-white text-xl">Lack of a simple, trusted, student-friendly shared auto ecosystem.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- The Solution Section -->
+    <section id="solution" class="py-24 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-sm font-bold text-gray-500 tracking-widest uppercase mb-2 border-b-2 border-brandYellow inline-block pb-1">The Solution</h2>
+                <h3 class="text-4xl md:text-5xl font-extrabold text-darkTheme mb-4">Introducing <span class="text-brandYellow">SAATHCHALO</span></h3>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">Route-based Shared Auto Platform for Students & Daily Commuters.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group">
+                    <div class="w-16 h-16 mx-auto bg-brandYellowLight rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-users-rays text-3xl text-brandYellow"></i>
+                    </div>
+                    <h4 class="text-xl font-bold mb-3">Smart Matching</h4>
+                    <p class="text-gray-600">Find co-passengers heading on the exact same route instantly.</p>
+                </div>
+                <!-- Feature 2 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group">
+                    <div class="w-16 h-16 mx-auto bg-brandYellowLight rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-wallet text-3xl text-brandYellow"></i>
+                    </div>
+                    <h4 class="text-xl font-bold mb-3">Shared Fare</h4>
+                    <p class="text-gray-600">Pay only your fair share. No haggling, no surge pricing anxiety.</p>
+                </div>
+                <!-- Feature 3 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group">
+                    <div class="w-16 h-16 mx-auto bg-brandYellowLight rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-stopwatch text-3xl text-brandYellow"></i>
+                    </div>
+                    <h4 class="text-xl font-bold mb-3">Less Waiting</h4>
+                    <p class="text-gray-600">Get picked up faster as autos route to high-density requests.</p>
+                </div>
+                <!-- Feature 4 -->
+                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group">
+                    <div class="w-16 h-16 mx-auto bg-brandYellowLight rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-shield-halved text-3xl text-brandYellow"></i>
+                    </div>
+                    <h4 class="text-xl font-bold mb-3">Safer Commute</h4>
+                    <p class="text-gray-600">Travel safely with known, verified campus co-riders.</p>
+                </div>
+            </div>
+            
+            <div class="mt-12 bg-white rounded-2xl p-6 shadow border border-gray-200 text-center max-w-4xl mx-auto">
+                 <p class="text-lg"><strong><i class="fa-solid fa-lightbulb text-brandYellow mr-2"></i> Aha Moment:</strong> What if 3 students waiting at different spots (Knowledge Park, Sector 132, Alpha 1) were matched into <strong>1 Smart Route</strong>? Shared Ride • Happy Students.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it Works Section -->
+    <section id="how-it-works" class="py-24 bg-darkTheme text-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-sm font-bold text-gray-400 tracking-widest uppercase mb-2 border-b-2 border-brandYellow inline-block pb-1">User Flow</h2>
+                <h3 class="text-4xl md:text-5xl font-extrabold mb-4">How it <span class="text-brandYellow">works?</span></h3>
+            </div>
+
+            <div class="flex flex-col md:flex-row items-center gap-16">
+                <!-- App Mockup -->
+                <div class="w-full md:w-1/2 flex justify-center">
+                    <div class="relative w-[300px] h-[600px] bg-gray-900 border-8 border-gray-800 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col">
+                        <!-- Top Bar -->
+                        <div class="h-6 w-full flex justify-between px-6 pt-2 items-center text-[10px] text-white">
+                            <span>18:45</span>
+                            <div class="flex gap-1"><i class="fa-solid fa-signal"></i><i class="fa-solid fa-wifi"></i><i class="fa-solid fa-battery-full"></i></div>
+                        </div>
+                        <!-- Map Area -->
+                        <div class="flex-1 bg-gray-800 relative bg-[url('https://www.transparenttextures.com/patterns/cartographer.png')]">
+                            <!-- Route Line -->
+                            <svg class="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M 50 150 Q 150 250 250 400" stroke="#eab308" stroke-width="4" fill="transparent" stroke-dasharray="6,6" />
+                            </svg>
+                            <!-- Markers -->
+                            <div class="absolute top-[130px] left-[35px] text-brandYellow text-2xl"><i class="fa-solid fa-location-dot"></i></div>
+                            <div class="absolute top-[240px] left-[140px] text-brandYellow text-2xl"><i class="fa-solid fa-location-dot"></i></div>
+                            <div class="absolute top-[380px] left-[235px] text-white text-2xl"><i class="fa-solid fa-flag-checkered"></i></div>
+                        </div>
+                        <!-- Bottom Sheet -->
+                        <div class="bg-gray-900 rounded-t-3xl p-6 absolute bottom-0 w-full border-t border-gray-700">
+                            <h4 class="text-center font-bold text-sm mb-4">YOUR SHARED RIDE <span class="text-gray-400 font-normal">(3 Passengers)</span></h4>
+                            <div class="flex justify-between mb-4 px-2">
+                                <div class="text-center"><div class="w-10 h-10 bg-blue-500 rounded-full mx-auto mb-1 flex items-center justify-center text-xs">You</div></div>
+                                <div class="text-center"><div class="w-10 h-10 bg-green-500 rounded-full mx-auto mb-1 flex items-center justify-center text-xs">S</div></div>
+                                <div class="text-center"><div class="w-10 h-10 bg-purple-500 rounded-full mx-auto mb-1 flex items-center justify-center text-xs">B</div></div>
+                            </div>
+                            <div class="flex justify-between items-center mb-6">
+                                <span class="text-xs text-gray-400">Total Est.</span>
+                                <span class="font-bold text-xl text-brandYellow">₹35.00 <span class="text-xs text-gray-400 font-normal">Your split</span></span>
+                            </div>
+                            <button class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition">CONFIRM SHARE</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Steps -->
+                <div class="w-full md:w-1/2 space-y-8">
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">1</div>
+                        <div>
+                            <h4 class="text-xl font-bold mb-1">Input Location</h4>
+                            <p class="text-gray-400">Students enter pickup & drop locations in the app.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">2</div>
+                        <div>
+                            <h4 class="text-xl font-bold mb-1">Smart Match</h4>
+                            <p class="text-gray-400">App instantly matches nearby riders on the same trajectory.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">3</div>
+                        <div>
+                            <h4 class="text-xl font-bold mb-1">Route Gen</h4>
+                            <p class="text-gray-400">System finds the most efficient, detour-free route for the auto. Inspired by Dijkstra's algorithm.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">4</div>
+                        <div>
+                            <h4 class="text-xl font-bold mb-1">Pickup</h4>
+                            <p class="text-gray-400">Auto collects all passengers sequentially in the shortest path, balancing time for all riders.</p>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">5</div>
+                        <div>
+                            <h4 class="text-xl font-bold mb-1">Auto-Pay</h4>
+                            <p class="text-gray-400">Each student pays only their fraction of the total fare automatically.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stakeholders & Impact Section -->
+    <section id="impact" class="py-24 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-sm font-bold text-gray-500 tracking-widest uppercase mb-2 border-b-2 border-brandYellow inline-block pb-1">The Future</h2>
+                <h3 class="text-4xl font-extrabold text-darkTheme mb-4">Small change. <span class="text-brandYellow">Big difference.</span></h3>
+                <p class="text-xl text-gray-600">Shared rides. Shared benefits.</p>
+            </div>
+
+            <!-- Stakeholders Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+                <div class="bg-gray-50 rounded-2xl overflow-hidden shadow border border-gray-100 transition hover:-translate-y-2 duration-300">
+                    <div class="h-32 bg-blue-100 flex items-center justify-center">
+                        <i class="fa-solid fa-user-graduate text-5xl text-blue-500"></i>
+                    </div>
+                    <div class="p-6">
+                        <h4 class="font-bold text-xl mb-4 text-center border-b pb-2">Students</h4>
+                        <ul class="space-y-3 text-gray-600">
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Significantly lower fares</li>
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Reduced waiting times</li>
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Safer travel with known peers</li>
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Easy digital booking</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-2xl overflow-hidden shadow border border-gray-100 transition hover:-translate-y-2 duration-300">
+                    <div class="h-32 bg-yellow-100 flex items-center justify-center">
+                        <i class="fa-solid fa-taxi text-5xl text-yellow-600"></i>
+                    </div>
+                    <div class="p-6">
+                        <h4 class="font-bold text-xl mb-4 text-center border-b pb-2">Auto Drivers</h4>
+                        <ul class="space-y-3 text-gray-600">
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> More passengers per trip</li>
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Higher total daily earnings</li>
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Less idle waiting time</li>
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Clear digital allocation</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="bg-gray-50 rounded-2xl overflow-hidden shadow border border-gray-100 transition hover:-translate-y-2 duration-300">
+                    <div class="h-32 bg-green-100 flex items-center justify-center">
+                        <i class="fa-solid fa-city text-5xl text-green-600"></i>
+                    </div>
+                    <div class="p-6">
+                        <h4 class="font-bold text-xl mb-4 text-center border-b pb-2">City & Society</h4>
+                        <ul class="space-y-3 text-gray-600">
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Fewer autos congesting roads</li>
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Reduced carbon emissions</li>
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Smarter urban mobility</li>
+                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Efficient use of resources</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Big Stats -->
+            <div class="bg-darkTheme text-white rounded-3xl p-10 md:p-16 shadow-2xl relative overflow-hidden">
+                <div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-brandYellow rounded-full opacity-10"></div>
+                <h4 class="text-center text-3xl font-bold mb-12 text-brandYellow">Let's make commuting smarter, together.</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="text-center">
+                        <div class="text-4xl md:text-5xl font-extrabold mb-3 text-white">↓ 30%</div>
+                        <p class="text-gray-400">Fewer autos on road<br>(Lower emissions)</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl md:text-5xl font-extrabold mb-3 text-brandYellow">↓ 40-50%</div>
+                        <p class="text-gray-400">Average commute cost<br>reduction for students</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl md:text-5xl font-extrabold mb-3 text-white">↓ 50%</div>
+                        <p class="text-gray-400">Waiting time decreased<br>at busy campus spots</p>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl md:text-5xl font-extrabold mb-3 text-brandYellow">1000+</div>
+                        <p class="text-gray-400">Students can benefit in<br>our campus & city alone</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-gray-400 py-12 border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
+            <div class="flex items-center gap-2 mb-4 md:mb-0">
+                <i class="fa-solid fa-route text-brandYellow text-2xl"></i>
+                <span class="font-bold text-xl text-white">SAATH<span class="text-brandYellow">CHALO</span></span>
+            </div>
+            <p class="text-sm">Design Thinking Project Prototype. Developed for Adarsh and every student commuter.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
