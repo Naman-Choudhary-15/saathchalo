@@ -28,7 +28,15 @@
         .hero-bg {
             background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.8)), url('https://images.unsplash.com/photo-1596726918804-54c3756312a0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') center/cover;
         }
+        /* Custom map styles */
+        .leaflet-routing-container { display: none !important; } 
     </style>
+    
+    <!-- Leaflet JS & CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 </head>
 <body class="bg-gray-50 text-gray-800">
 
@@ -227,7 +235,7 @@
                     </div>
                     <h4 class="text-2xl font-bold mb-3 text-darkTheme">Community Service</h4>
                     <p class="text-gray-600 flex-grow mb-6">Student-driven carpooling and community rides. Built on trust and mutual help.</p>
-                    <button class="w-full bg-darkTheme text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">Book Community Ride</button>
+                    <button onclick="openBookingModal('Community Service', '₹0 - ₹10', 'fa-handshake-angle', 'text-green-600')" class="w-full bg-darkTheme text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">Book Community Ride</button>
                 </div>
 
                 <!-- Method 2: Shuttle Service -->
@@ -238,7 +246,7 @@
                     </div>
                     <h4 class="text-2xl font-bold mb-3 text-darkTheme">Shuttle Service</h4>
                     <p class="text-gray-600 flex-grow mb-6">Fixed-route campus shuttles running on scheduled timings. Best for regular large-group commutes.</p>
-                    <button class="w-full bg-darkTheme text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">View Shuttle Schedule</button>
+                    <button onclick="openBookingModal('Shuttle Service', '₹20.00', 'fa-van-shuttle', 'text-blue-600')" class="w-full bg-darkTheme text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">View Shuttle Schedule</button>
                 </div>
 
                 <!-- Method 3: Auto Service -->
@@ -248,7 +256,7 @@
                     </div>
                     <h4 class="text-2xl font-bold mb-3 text-darkTheme">Auto Service</h4>
                     <p class="text-gray-600 flex-grow mb-6">Dynamic route-matching for shared auto-rickshaws. Fast, affordable, and on-demand.</p>
-                    <button class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition shadow-md">Book Auto Now</button>
+                    <button onclick="openBookingModal('Auto Service', '₹35.00', 'fa-taxi', 'text-brandYellow')" class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition shadow-md">Book Auto Now</button>
                 </div>
             </div>
         </div>
@@ -433,5 +441,162 @@
         </div>
     </footer>
 
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="fixed inset-0 z-[100] hidden bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col md:flex-row overflow-hidden relative">
+            <!-- Close Button -->
+            <button onclick="closeModal()" class="absolute top-4 right-4 z-[110] bg-white text-gray-800 w-10 h-10 rounded-full shadow-md flex items-center justify-center hover:bg-gray-100">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            
+            <!-- Left Panel: Controls -->
+            <div class="w-full md:w-1/3 bg-gray-50 p-6 md:p-8 flex flex-col h-full overflow-y-auto border-r border-gray-200">
+                <h3 class="text-2xl font-bold text-darkTheme mb-2" id="modalTitle">Book a Ride</h3>
+                <p class="text-gray-500 mb-6 text-sm" id="modalSubtitle">Select your pickup and drop locations.</p>
+                
+                <div class="relative pl-8 mb-6">
+                    <!-- timeline line -->
+                    <div class="absolute left-3.5 top-4 bottom-4 w-0.5 bg-gray-300"></div>
+                    <div class="relative mb-4">
+                        <div class="absolute -left-8 top-1 w-3 h-3 bg-brandYellow rounded-full border-2 border-white shadow"></div>
+                        <input type="text" id="pickupInput" placeholder="Pickup location" class="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brandYellow outline-none transition" value="Knowledge Park, Greater Noida">
+                    </div>
+                    <div class="relative">
+                        <div class="absolute -left-8 top-1 w-3 h-3 bg-darkTheme rounded-full border-2 border-white shadow"></div>
+                        <input type="text" id="dropoffInput" placeholder="Drop-off location" class="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brandYellow outline-none transition" value="Alpha 1, Greater Noida">
+                    </div>
+                </div>
+                
+                <button onclick="calculateRoute()" class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-xl hover:bg-gray-300 transition mb-6">Calculate Route</button>
+                
+                <div id="rideDetails" class="hidden flex-col gap-4 mb-6">
+                    <div class="bg-white p-4 rounded-xl border border-brandYellow shadow-sm flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-darkTheme flex items-center gap-2"><i id="serviceIcon" class="fa-solid fa-taxi text-brandYellow"></i> <span id="selectedService">Auto Service</span></h4>
+                            <p class="text-xs text-gray-500">Shared ride • 3 mins away</p>
+                        </div>
+                        <div class="text-right">
+                            <h4 class="font-bold text-xl text-darkTheme" id="ridePrice">₹35.00</h4>
+                            <p class="text-xs text-gray-400"><del>₹80.00</del></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-auto pt-4">
+                    <button id="confirmRideBtn" disabled class="w-full bg-brandYellow text-darkTheme font-bold py-4 rounded-xl hover:bg-yellow-400 transition shadow-md opacity-50 cursor-not-allowed">Confirm Ride</button>
+                </div>
+            </div>
+            
+            <!-- Right Panel: Map -->
+            <div class="w-full md:w-2/3 h-64 md:h-full relative bg-gray-200" id="mapContainer">
+                <!-- Leaflet map -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let routingControl;
+        
+        function initMap() {
+            if (map) return;
+            map = L.map('mapContainer').setView([28.4744, 77.5040], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap contributors & CARTO',
+                maxZoom: 19
+            }).addTo(map);
+        }
+
+        function openBookingModal(serviceName, price, iconClass, iconColor) {
+            document.getElementById('bookingModal').classList.remove('hidden');
+            document.getElementById('selectedService').innerText = serviceName;
+            document.getElementById('ridePrice').innerText = price;
+            
+            const iconElem = document.getElementById('serviceIcon');
+            iconElem.className = `fa-solid ${iconClass} ${iconColor}`;
+            
+            document.getElementById('rideDetails').classList.add('hidden');
+            const confirmBtn = document.getElementById('confirmRideBtn');
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            confirmBtn.innerText = 'Confirm Ride';
+            
+            if (routingControl) {
+                map.removeControl(routingControl);
+                routingControl = null;
+            }
+
+            setTimeout(() => {
+                initMap();
+                map.invalidateSize();
+            }, 100);
+        }
+
+        function closeModal() {
+            document.getElementById('bookingModal').classList.add('hidden');
+        }
+
+        function calculateRoute() {
+            if (routingControl) {
+                map.removeControl(routingControl);
+            }
+
+            const btn = document.getElementById('confirmRideBtn');
+            const originalText = btn.innerText;
+            btn.innerText = 'Calculating...';
+            
+            setTimeout(() => {
+                routingControl = L.Routing.control({
+                    waypoints: [
+                        L.latLng(28.4744, 77.5040),
+                        L.latLng(28.4962, 77.5140)
+                    ],
+                    routeWhileDragging: false,
+                    addWaypoints: false,
+                    fitSelectedRoutes: true,
+                    show: false,
+                    lineOptions: {
+                        styles: [{color: '#0f172a', opacity: 0.8, weight: 5}, {color: '#eab308', opacity: 1, weight: 3, dashArray: '10,10'}]
+                    },
+                    createMarker: function(i, wp, nWps) {
+                        return L.marker(wp.latLng, {
+                            icon: L.divIcon({
+                                className: 'bg-transparent',
+                                html: `<div class="w-8 h-8 ${i===0 ? 'bg-brandYellow' : 'bg-darkTheme'} text-white rounded-full border-2 border-white shadow-lg flex items-center justify-center font-bold text-xs"><i class="fa-solid ${i===0 ? 'fa-location-dot text-darkTheme' : 'fa-flag-checkered'}"></i></div>`,
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 16]
+                            })
+                        });
+                    }
+                }).addTo(map);
+
+                document.getElementById('rideDetails').classList.remove('hidden');
+                document.getElementById('rideDetails').classList.add('flex');
+                
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.innerText = 'Confirm Ride';
+                
+            }, 800);
+        }
+
+        document.getElementById('confirmRideBtn').addEventListener('click', function() {
+            if (this.disabled) return;
+            this.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i> Booking...';
+            setTimeout(() => {
+                this.innerHTML = '<i class="fa-solid fa-check mr-2"></i> Ride Booked Successfully!';
+                this.classList.remove('bg-brandYellow', 'text-darkTheme');
+                this.classList.add('bg-green-500', 'text-white');
+                
+                setTimeout(() => {
+                    closeModal();
+                    // Reset button state for next time
+                    this.classList.add('bg-brandYellow', 'text-darkTheme');
+                    this.classList.remove('bg-green-500', 'text-white');
+                    this.innerHTML = 'Confirm Ride';
+                }, 2000);
+            }, 1500);
+        });
+    </script>
 </body>
 </html>
