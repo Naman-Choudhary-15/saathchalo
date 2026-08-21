@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SAATHCHALO | Smarter Shared Commutes</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <script>
         tailwind.config = {
             theme: {
@@ -60,27 +60,48 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="hero-bg min-h-screen flex items-center relative pt-20">
+    <section class="hero-bg min-h-screen flex items-center relative pt-20 overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-20">
-            <div class="max-w-3xl">
-                <div class="inline-block border-b-2 border-brandYellow mb-6">
-                    <p class="text-brandYellow font-semibold tracking-widest uppercase text-sm mb-1">Design Thinking Project</p>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <!-- Text Content -->
+                <div class="max-w-3xl">
+                    <div class="inline-block border-b-2 border-brandYellow mb-6">
+                        <p class="text-brandYellow font-semibold tracking-widest uppercase text-sm mb-1">Design Thinking Project</p>
+                    </div>
+                    <h1 class="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-6">
+                        What if <span class="text-brandYellow">Empty Seats</span> <br>
+                        could become <br>
+                        <span class="text-brandYellow">Affordable Rides?</span>
+                    </h1>
+                    <p class="text-xl md:text-2xl text-gray-300 mb-8 font-light">
+                        Ek Raah, Kai Manzilein | Smarter • Safer • Shared Commutes
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <a href="#booking" class="bg-brandYellow text-darkTheme text-center px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-400 transition-colors shadow-lg hover:shadow-yellow-500/30">
+                            Book a Ride Now
+                        </a>
+                        <a href="#problem" class="border-2 border-gray-400 text-white text-center px-8 py-4 rounded-full font-bold text-lg hover:border-brandYellow hover:text-brandYellow transition-colors">
+                            Understand the Problem
+                        </a>
+                    </div>
                 </div>
-                <h1 class="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-6">
-                    What if <span class="text-brandYellow">Empty Seats</span> <br>
-                    could become <br>
-                    <span class="text-brandYellow">Affordable Rides?</span>
-                </h1>
-                <p class="text-xl md:text-2xl text-gray-300 mb-8 font-light">
-                    Ek Raah, Kai Manzilein | Smarter • Safer • Shared Commutes
-                </p>
-                <div class="flex flex-col sm:flex-row gap-4">
-                    <a href="#booking" class="bg-brandYellow text-darkTheme text-center px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-400 transition-colors shadow-lg hover:shadow-yellow-500/30">
-                        Book a Ride Now
-                    </a>
-                    <a href="#problem" class="border-2 border-gray-400 text-white text-center px-8 py-4 rounded-full font-bold text-lg hover:border-brandYellow hover:text-brandYellow transition-colors">
-                        Understand the Problem
-                    </a>
+                
+                <!-- Hero Image Graphic -->
+                <div class="hidden lg:block relative z-10">
+                    <div class="absolute inset-0 bg-brandYellow rounded-full blur-[120px] opacity-20"></div>
+                    <div class="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-800 transform rotate-3 hover:rotate-0 transition-transform duration-500">
+                        <img src="https://images.unsplash.com/photo-1524661135-423995f22d0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Commuter looking at map" class="w-full h-[500px] object-cover opacity-90 hover:opacity-100 transition-opacity">
+                        <!-- Floating UI Badge -->
+                        <div class="absolute bottom-8 left-8 bg-white/95 backdrop-blur rounded-2xl p-4 shadow-2xl flex items-center gap-4 animate-bounce" style="animation-duration: 3s;">
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-xl">
+                                <i class="fa-solid fa-check-double"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">Ride Matched</p>
+                                <p class="text-lg font-extrabold text-darkTheme">₹35.00 <span class="text-sm font-normal text-gray-400 line-through">₹80.00</span></p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
