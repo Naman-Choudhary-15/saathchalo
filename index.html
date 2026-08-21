@@ -43,11 +43,9 @@
                 <div class="hidden md:flex space-x-8">
                     <a href="#problem" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">The Problem</a>
                     <a href="#solution" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Solution</a>
+                    <a href="#booking" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Book a Ride</a>
                     <a href="#how-it-works" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">How it Works</a>
                     <a href="#impact" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Impact</a>
-                </div>
-                <div class="hidden md:flex">
-                    <a href="#solution" class="bg-brandYellow text-darkTheme px-6 py-2 rounded-full font-bold hover:bg-yellow-400 transition-colors shadow-lg hover:shadow-yellow-500/20">Try Prototype</a>
                 </div>
             </div>
         </div>
@@ -69,8 +67,8 @@
                     Ek Raah, Kai Manzilein | Smarter • Safer • Shared Commutes
                 </p>
                 <div class="flex flex-col sm:flex-row gap-4">
-                    <a href="#solution" class="bg-brandYellow text-darkTheme text-center px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-400 transition-colors shadow-lg hover:shadow-yellow-500/30">
-                        Explore the Solution
+                    <a href="#booking" class="bg-brandYellow text-darkTheme text-center px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-400 transition-colors shadow-lg hover:shadow-yellow-500/30">
+                        Book a Ride Now
                     </a>
                     <a href="#problem" class="border-2 border-gray-400 text-white text-center px-8 py-4 rounded-full font-bold text-lg hover:border-brandYellow hover:text-brandYellow transition-colors">
                         Understand the Problem
@@ -208,6 +206,50 @@
             
             <div class="mt-12 bg-white rounded-2xl p-6 shadow border border-gray-200 text-center max-w-4xl mx-auto">
                  <p class="text-lg"><strong><i class="fa-solid fa-lightbulb text-brandYellow mr-2"></i> Aha Moment:</strong> What if 3 students waiting at different spots (Knowledge Park, Sector 132, Alpha 1) were matched into <strong>1 Smart Route</strong>? Shared Ride • Happy Students.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Booking Option Section -->
+    <section id="booking" class="py-24 bg-white border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-sm font-bold text-gray-500 tracking-widest uppercase mb-2 border-b-2 border-brandYellow inline-block pb-1">Ready to Ride?</h2>
+                <h3 class="text-4xl md:text-5xl font-extrabold text-darkTheme mb-4">Choose Your <span class="text-brandYellow">Booking Option</span></h3>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">Select the service that fits your daily commute needs.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Method 1: Community Service -->
+                <div class="bg-gray-50 p-8 rounded-2xl shadow-lg border border-gray-100 hover:-translate-y-2 transition-transform text-center flex flex-col h-full">
+                    <div class="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-6">
+                        <i class="fa-solid fa-handshake-angle text-4xl text-green-600"></i>
+                    </div>
+                    <h4 class="text-2xl font-bold mb-3 text-darkTheme">Community Service</h4>
+                    <p class="text-gray-600 flex-grow mb-6">Student-driven carpooling and community rides. Built on trust and mutual help.</p>
+                    <button class="w-full bg-darkTheme text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">Book Community Ride</button>
+                </div>
+
+                <!-- Method 2: Shuttle Service -->
+                <div class="bg-gray-50 p-8 rounded-2xl shadow-lg border border-gray-100 hover:-translate-y-2 transition-transform text-center flex flex-col h-full relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-brandYellow text-darkTheme text-xs font-bold px-3 py-1 rounded-bl-lg">POPULAR</div>
+                    <div class="w-20 h-20 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                        <i class="fa-solid fa-van-shuttle text-4xl text-blue-600"></i>
+                    </div>
+                    <h4 class="text-2xl font-bold mb-3 text-darkTheme">Shuttle Service</h4>
+                    <p class="text-gray-600 flex-grow mb-6">Fixed-route campus shuttles running on scheduled timings. Best for regular large-group commutes.</p>
+                    <button class="w-full bg-darkTheme text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">View Shuttle Schedule</button>
+                </div>
+
+                <!-- Method 3: Auto Service -->
+                <div class="bg-brandYellow/10 p-8 rounded-2xl shadow-lg border border-brandYellow hover:-translate-y-2 transition-transform text-center flex flex-col h-full">
+                    <div class="w-20 h-20 mx-auto bg-brandYellowLight rounded-full flex items-center justify-center mb-6">
+                        <i class="fa-solid fa-taxi text-4xl text-brandYellow"></i>
+                    </div>
+                    <h4 class="text-2xl font-bold mb-3 text-darkTheme">Auto Service</h4>
+                    <p class="text-gray-600 flex-grow mb-6">Dynamic route-matching for shared auto-rickshaws. Fast, affordable, and on-demand.</p>
+                    <button class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition shadow-md">Book Auto Now</button>
+                </div>
             </div>
         </div>
     </section>
