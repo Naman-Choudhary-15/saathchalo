@@ -10,7 +10,10 @@
             }).addTo(map);
         }
 
-        function openBookingModal(serviceName, price, iconClass, iconColor) {
+        let isLivePoolingMode = false;
+
+        function openBookingModal(serviceName, price, iconClass, iconColor, isLive = false) {
+            isLivePoolingMode = isLive;
             document.getElementById('bookingModal').classList.remove('hidden');
             document.getElementById('selectedService').innerText = serviceName;
             document.getElementById('ridePrice').innerText = price;
@@ -24,6 +27,15 @@
             confirmBtn.classList.add('opacity-50', 'cursor-not-allowed');
             confirmBtn.innerText = 'Confirm Ride';
             
+            if (isLive) {
+                document.getElementById('modalTitle').innerText = 'Join an Active Ride';
+                document.getElementById('modalSubtitle').innerText = 'Finding autos currently en route to your destination...';
+                document.getElementById('confirmRideBtn').innerText = 'Join Ride Now';
+            } else {
+                document.getElementById('modalTitle').innerText = 'Book a Ride';
+                document.getElementById('modalSubtitle').innerText = 'Select your pickup and drop locations.';
+            }
+
             if (routingControl) {
                 map.removeControl(routingControl);
                 routingControl = null;
@@ -77,8 +89,21 @@
 
             btn.innerText = 'Calculating Route...';
             
+            let waypoints = [];
+            let rideDetailText = '';
+
+            if (isLivePoolingMode) {
+                // Add a simulated auto location slightly before the pickup point to show it's en-route
+                let autoLocation = L.latLng(pickupLatLng.lat - 0.015, pickupLatLng.lng - 0.015);
+                waypoints = [autoLocation, pickupLatLng, dropoffLatLng];
+                rideDetailText = "Found Auto UP16-AB-1234 • Arriving in 2 mins • 2 seats left";
+            } else {
+                waypoints = [pickupLatLng, dropoffLatLng];
+                rideDetailText = "Shared ride • 3 mins away";
+            }
+            
             routingControl = L.Routing.control({
-                waypoints: [pickupLatLng, dropoffLatLng],
+                waypoints: waypoints,
                 routeWhileDragging: false,
                 addWaypoints: false,
                 fitSelectedRoutes: true,
@@ -87,10 +112,29 @@
                     styles: [{color: '#0f172a', opacity: 0.8, weight: 5}, {color: '#eab308', opacity: 1, weight: 3, dashArray: '10,10'}]
                 },
                 createMarker: function(i, wp, nWps) {
+                    if (isLivePoolingMode && i === 0) {
+                        // Custom Marker for the en-route Auto
+                        return L.marker(wp.latLng, {
+                            icon: L.divIcon({
+                                className: 'bg-transparent',
+                                html: `<div class="w-10 h-10 bg-purple-600 text-white rounded-full border-2 border-white shadow-lg flex items-center justify-center font-bold text-lg"><i class="fa-solid fa-taxi"></i></div>`,
+                                iconSize: [40, 40],
+                                iconAnchor: [20, 20]
+                            })
+                        });
+                    }
+                    
+                    let iconHtml = '';
+                    if (i === 0 || (isLivePoolingMode && i === 1)) {
+                        iconHtml = `<div class="w-8 h-8 bg-brandYellow text-darkTheme rounded-full border-2 border-white shadow-lg flex items-center justify-center font-bold text-xs"><i class="fa-solid fa-location-dot"></i></div>`;
+                    } else {
+                        iconHtml = `<div class="w-8 h-8 bg-darkTheme text-white rounded-full border-2 border-white shadow-lg flex items-center justify-center font-bold text-xs"><i class="fa-solid fa-flag-checkered"></i></div>`;
+                    }
+                    
                     return L.marker(wp.latLng, {
                         icon: L.divIcon({
                             className: 'bg-transparent',
-                            html: `<div class="w-8 h-8 ${i===0 ? 'bg-brandYellow' : 'bg-darkTheme'} text-white rounded-full border-2 border-white shadow-lg flex items-center justify-center font-bold text-xs"><i class="fa-solid ${i===0 ? 'fa-location-dot text-darkTheme' : 'fa-flag-checkered'}"></i></div>`,
+                            html: iconHtml,
                             iconSize: [32, 32],
                             iconAnchor: [16, 16]
                         })
@@ -98,13 +142,19 @@
                 }
             }).addTo(map);
 
+            // Update details UI
+            const detailParagraph = document.querySelector('#rideDetails p');
+            if (detailParagraph) {
+                detailParagraph.innerText = rideDetailText;
+            }
+
             document.getElementById('rideDetails').classList.remove('hidden');
             document.getElementById('rideDetails').classList.add('flex');
             
             setTimeout(() => {
                 btn.disabled = false;
                 btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                btn.innerText = 'Confirm Ride';
+                btn.innerText = isLivePoolingMode ? 'Join Ride Now' : 'Confirm Ride';
             }, 800);
         }
 

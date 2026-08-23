@@ -248,7 +248,7 @@
                 <p class="text-xl text-gray-600 max-w-2xl mx-auto">Select the service that fits your daily commute needs.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 <!-- Method 1: Community Service -->
                 <div class="bg-gray-50 p-8 rounded-2xl shadow-lg border border-gray-100 hover:-translate-y-2 transition-transform text-center flex flex-col h-full">
                     <div class="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-6">
@@ -278,6 +278,17 @@
                     <h4 class="text-2xl font-bold mb-3 text-darkTheme">Auto Service</h4>
                     <p class="text-gray-600 flex-grow mb-6">Dynamic route-matching for shared auto-rickshaws. Fast, affordable, and on-demand.</p>
                     <button onclick="openBookingModal('Auto Service', '₹35.00', 'fa-taxi', 'text-brandYellow')" class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition shadow-md">Book Auto Now</button>
+                </div>
+
+                <!-- Method 4: Live Pooling -->
+                <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-2xl shadow-lg border border-purple-200 hover:-translate-y-2 transition-transform text-center flex flex-col h-full relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg animate-pulse">LIVE</div>
+                    <div class="w-20 h-20 mx-auto bg-purple-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                        <i class="fa-solid fa-bolt text-4xl text-purple-600"></i>
+                    </div>
+                    <h4 class="text-2xl font-bold mb-3 text-darkTheme">Live Pooling</h4>
+                    <p class="text-gray-600 flex-grow mb-6">Hop into an auto already en route to your destination. Fill empty seats & ride super cheap!</p>
+                    <button onclick="openBookingModal('Live Pooling', '₹15.00', 'fa-bolt', 'text-purple-600', true)" class="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 rounded-xl hover:from-purple-700 hover:to-pink-600 transition shadow-md shadow-purple-500/30">Find Active Autos</button>
                 </div>
             </div>
         </div>
