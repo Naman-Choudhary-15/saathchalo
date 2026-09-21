@@ -5,23 +5,32 @@
 
 SAATHCHALO is a Design Thinking Project proposing a route-based shared auto platform designed specifically for students and daily commuters. It aims to solve the daily friction of long waits, unpredictable surge pricing, and unsafe solo travels.
 
-## ✨ Prototype Features
-We have built a fully functional interactive web prototype to demonstrate the core features of the platform:
-- **Live Pooling Simulation:** Experience a real-time simulation of hopping into an active auto en route to your destination to fill empty seats and save money.
-- **Interactive Maps:** Fully functional, embedded map interface modeled after popular ride-sharing apps, powered by OpenStreetMap and Leaflet.js.
-- **Dynamic Real-World Routing:** Search for real locations (e.g., "Connaught Place, Delhi") using the live Nominatim Geocoding API, and the platform will dynamically plot a real-world route.
-- **Floating Action Button:** Persistent "Live Booking" UI element for quick access to the pooling feature across the page.
-- **Modern UI:** Responsive, clean, and interactive design built with Tailwind CSS.
+## ✨ Project Features & Booking Modes
+We have built a fully functional interactive web prototype that demonstrates all the core booking methods of the platform:
+
+1. **⚡ Live Booking / Live Pooling (NEW!):** 
+   - A dedicated feature allowing users to hop into an auto *already en route* to their destination.
+   - Includes a hovering floating action button (FAB) all around the page for quick access.
+   - Features a live map simulation dropping 3 pins (Active Auto Location, Your Pickup, and Drop-off).
+   - Helps fill empty seats on the fly, offering heavily discounted fares (e.g., ₹15).
+
+2. **🚐 Shuttle Service:**
+   - Fixed-route campus shuttles running on scheduled timings. 
+   - Best for regular large-group commutes to standard campus locations.
+
+3. **🚕 Auto Service:**
+   - Dynamic route-matching for shared auto-rickshaws.
+   - Fast, affordable, and on-demand matching for 3-4 students heading the exact same way.
+
+4. **🤝 Community Service:**
+   - Student-driven carpooling and community rides built on trust and mutual help.
+
+## 🗺️ Interactive Maps & Technology
+- **Real-World Routing:** Type real city locations (e.g., "Knowledge Park" to "Alpha 1") and the app plots a real-world route using the **OpenStreetMap Nominatim Geocoding API**.
+- **Interactive UI:** A full-screen interactive map modal pops up, simulating an Uber/Rapido-like booking experience, built entirely using **Leaflet.js** and **Leaflet Routing Machine**.
 
 ## 🌟 The Core Problem
 From the college gate to home, students face a long, uncertain, and costly journey. Current ride-hailing apps are car-centric and lack real-time dynamic route matching optimized for auto-rickshaws at a micro-level.
-
-## 💡 The Solution
-A simple, trusted, student-friendly shared auto ecosystem featuring:
-- **Smart Matching:** Instantly find co-passengers heading on the exact same route.
-- **Shared Fare:** Pay only your fair share. No haggling, no surge pricing anxiety.
-- **Less Waiting:** Get picked up faster as autos dynamically route to high-density requests.
-- **Safer Commute:** Travel safely with known, verified campus co-riders.
 
 ## 🚀 How it Works
 1. **Input Location:** Enter pickup & drop locations in the app.
@@ -32,17 +41,15 @@ A simple, trusted, student-friendly shared auto ecosystem featuring:
 
 ## 🛠️ Tech Stack
 This prototype is intentionally designed to be lightweight and zero-build for easy demonstration:
-- **Frontend:** HTML5, Tailwind CSS (via CDN)
-- **Icons & Graphics:** FontAwesome 6, Unsplash
-- **Map & Routing:** Leaflet.js, Leaflet Routing Machine
-- **Geocoding API:** OpenStreetMap Nominatim API (Real-world location search)
-- **Logic:** Vanilla JavaScript (`script.js`)
+- **Frontend:** HTML5, Tailwind CSS (via CDN), Vanilla JavaScript (`script.js`)
+- **Icons & Graphics:** FontAwesome 6.5.1, Unsplash
+- **Map & Routing:** Leaflet.js, OpenStreetMap API
 
 ## 💻 How to Run Locally
 This is a static website, which means no complex installations or servers are required!
 1. Clone this repository or download the ZIP.
 2. Double-click on `index.html` to open it in any web browser (Chrome, Safari, Edge, etc.).
-3. Try clicking the "Book a Ride Now" or the "LIVE BOOKING" floating button and type in real city locations!
+3. Try clicking any booking option or the floating "LIVE BOOKING" button and type in real city locations to see the map in action!
 
 ---
 *Design Thinking Project Prototype. Developed for every student commuter.*
