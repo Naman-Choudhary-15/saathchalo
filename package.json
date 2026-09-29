@@ -1,0 +1,21 @@
+{
+  "name": "saathchalo",
+  "version": "2.0.0",
+  "description": "SAATHCHALO — Real-Time Shared Commute & Community Transit Web Application",
+  "main": "serve.js",
+  "scripts": {
+    "start": "node serve.js",
+    "dev": "node serve.js",
+    "test": "node test_core.js"
+  },
+  "keywords": [
+    "saathchalo",
+    "shared-commute",
+    "realtime",
+    "pooling",
+    "transit",
+    "mobility"
+  ],
+  "author": "SAATHCHALO Team",
+  "license": "MIT"
+}

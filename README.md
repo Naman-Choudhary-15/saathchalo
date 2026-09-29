@@ -1,55 +1,141 @@
 # SAATHCHALO 🛺
-
 > **What if Empty Seats could become Affordable Rides?**  
 > *Ek Raah, Kai Manzilein | Smarter • Safer • Shared Commutes*
 
-SAATHCHALO is a Design Thinking Project proposing a route-based shared auto platform designed specifically for students and daily commuters. It aims to solve the daily friction of long waits, unpredictable surge pricing, and unsafe solo travels.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-brightgreen.svg)](https://nodejs.org/)
+[![Status](https://img.shields.io/badge/Status-Live%20Multi--User-blue.svg)](https://github.com/Naman-Choudhary-15/saathchalo)
 
-## ✨ Project Features & Booking Modes
-We have built a fully functional interactive web prototype that demonstrates all the core booking methods of the platform:
+**SAATHCHALO** is an intelligent, route-based shared transportation web platform designed for university students and daily commuters. It bridges the gap between stranded commuters and underutilized vehicles across high-frequency student hubs in Delhi-NCR (Greater Noida, Noida, Ghaziabad).
 
-1. **⚡ Live Booking / Live Pooling (NEW!):** 
-   - A dedicated feature allowing users to hop into an auto *already en route* to their destination.
-   - Includes a hovering floating action button (FAB) all around the page for quick access.
-   - Features a live map simulation dropping 3 pins (Active Auto Location, Your Pickup, and Drop-off).
-   - Helps fill empty seats on the fly, offering heavily discounted fares (e.g., ₹15).
-
-2. **🚐 Shuttle Service:**
-   - Fixed-route campus shuttles running on scheduled timings. 
-   - Best for regular large-group commutes to standard campus locations.
-
-3. **🚕 Auto Service:**
-   - Dynamic route-matching for shared auto-rickshaws.
-   - Fast, affordable, and on-demand matching for 3-4 students heading the exact same way.
-
-4. **🤝 Community Service:**
-   - Student-driven carpooling and community rides built on trust and mutual help.
-
-## 🗺️ Interactive Maps & Technology
-- **Real-World Routing:** Type real city locations (e.g., "Knowledge Park" to "Alpha 1") and the app plots a real-world route using the **OpenStreetMap Nominatim Geocoding API**.
-- **Interactive UI:** A full-screen interactive map modal pops up, simulating an Uber/Rapido-like booking experience, built entirely using **Leaflet.js** and **Leaflet Routing Machine**.
-
-## 🌟 The Core Problem
-From the college gate to home, students face a long, uncertain, and costly journey. Current ride-hailing apps are car-centric and lack real-time dynamic route matching optimized for auto-rickshaws at a micro-level.
-
-## 🚀 How it Works
-1. **Input Location:** Enter pickup & drop locations in the app.
-2. **Smart Match:** The app instantly matches nearby riders on the same trajectory.
-3. **Route Gen:** System finds the most efficient, detour-free route (inspired by Dijkstra's algorithm).
-4. **Pickup:** Auto collects passengers sequentially in the shortest path.
-5. **Auto-Pay:** Each student pays only their fraction of the total fare automatically.
-
-## 🛠️ Tech Stack
-This prototype is intentionally designed to be lightweight and zero-build for easy demonstration:
-- **Frontend:** HTML5, Tailwind CSS (via CDN), Vanilla JavaScript (`script.js`)
-- **Icons & Graphics:** FontAwesome 6.5.1, Unsplash
-- **Map & Routing:** Leaflet.js, OpenStreetMap API
-
-## 💻 How to Run Locally
-This is a static website, which means no complex installations or servers are required!
-1. Clone this repository or download the ZIP.
-2. Double-click on `index.html` to open it in any web browser (Chrome, Safari, Edge, etc.).
-3. Try clicking any booking option or the floating "LIVE BOOKING" button and type in real city locations to see the map in action!
+This version is a **Real Multi-User Live Platform** featuring zero-configuration real-time communication: commuters across different phones, tablets, and laptops can register, log in, join regional community groups of their choice, chat in real time, cast destination votes, pool into shared rides with automated vehicle allocation, and reserve shuttle seats with instant multi-device synchronization.
 
 ---
-*Design Thinking Project Prototype. Developed for every student commuter.*
+
+## 🌟 Key Features & Capabilities
+
+### 1. 💬 Instant Real-Time Community Group Chat
+- **0ms Optimistic UI Delivery:** Messages appear immediately on the sender's screen with zero latency or loading delay.
+- **Cross-Device Synchronization:** Powered by Server-Sent Events (SSE) with 10s keepalive heartbeats and background sync fallback.
+- **Mobile Keyboard Compatibility:** Native support for virtual keyboard `Enter` and touch submission across Android Chrome and iOS Safari.
+- **Clean Slate (Zero Demo Chats):** Pure commuter-driven conversations with a welcoming empty-state card for newly activated hubs.
+- **Strict Privacy Guarantee:** Only the commuter's **Display Name** and **Avatar** are visible to peers in community feeds; private emails and phone numbers remain strictly confidential.
+
+### 2. 👥 Choice to Join Any Community Group
+Commuters have complete freedom to join, leave, and switch between regional transit communities:
+- **Supported Regional Communities:**
+  1. 🎓 **Knowledge Park** (Greater Noida) — College campuses, hostels & student housing
+  2. 🔄 **Pari Chowk** (Greater Noida) — Major transit interchange & Aqua Line metro terminal
+  3. 🏢 **Alpha 1 & 2** (Greater Noida) — Residential sectors & commercial markets
+  4. 🏙️ **Noida Sector 62** (Noida) — IT corridor, institutions & Blue Line metro
+  5. 🚆 **Ghaziabad Terminal** (Ghaziabad) — Railway junction & intercity connector
+- **Interactive Header Controls:** Dynamic `[+ Join Group]` / `Member ✓` button in the community chat header. Hovering over a joined badge gives the option to leave the group.
+- **Visual Status Badges:** Area tabs display a `✓ Joined` badge for every community the commuter is enrolled in.
+- **"Explore All Groups" Modal:** A comprehensive directory modal allowing commuters to view member counts, transit descriptions, and join or switch to any regional hub with a single tap.
+- **Multi-Group Membership:** Commuters traveling between campus and home can join multiple communities simultaneously.
+
+### 3. 🗳️ Real-Time Community Destination Voting
+- Backed by persistent sessions and active daily polls across all 5 communities.
+- **One Vote per Account:** Guaranteed enforcement prevents ballot manipulation.
+- **Pre-Vote Policy Modal:** Displays the chosen destination and communicates the ₹50 cancellation/no-show policy before recording the vote.
+- **Synchronous Telemetry:** Vote counts, bar percentages, and active voter statistics update across all screens in real time.
+
+### 4. 🚐 Automated Vehicle Allocation & Pooling
+- When commuters agree on a shared destination, the system pools them into a single ride.
+- **Dynamic Capacity & Allocation:**
+  - 1 – 4 Riders → **Shared Auto** (e.g. `UP16-AT-1411`)
+  - 5 – 6 Riders → **Shared Cab**
+  - 7 – 20 Riders → **Mini Shuttle Van**
+- Confirmed rides broadcast immediately to all participants with driver information, vehicle license plate, and live Leaflet route tracking.
+
+### 5. 📅 Live Campus Shuttle Availability
+- Fixed-route campus shuttles with real-time seat decrementing.
+- Prevents overbooking at the server level.
+- Live status tags (`Available`, `Filling Fast`, `Full`) update across all devices without page reloads.
+
+### 6. 🔐 Real Authentication & Persistent Profiles
+- Email and password registration with encrypted credentials.
+- Persistent sessions stored securely across browser reloads.
+- Dedicated profile modal to manage display name, avatar, and view commuter standing.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend Structure & Styling** | Semantic HTML5, Vanilla JavaScript (ES6+), Vanilla CSS & Tailwind CSS |
+| **Typography & Icons** | Google Fonts (*Inter*), Font Awesome 6 Pro |
+| **Interactive Maps** | Leaflet.js, OpenStreetMap Nominatim Geocoding |
+| **Realtime Engine** | Server-Sent Events (SSE) with QUIC stream keepalives & smart sync |
+| **Integrated Backend** | Zero-dependency Node.js HTTP server (`serve.js`) |
+| **Persistence** | Embedded persistent database engine (`saath-db.json`) |
+| **Cloud Database (Optional)** | Supabase (PostgreSQL with RLS, Supabase Auth, Storage) via `supabase-schema.sql` |
+
+---
+
+## 🚀 Quickstart Guide
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/Naman-Choudhary-15/saathchalo.git
+cd saathchalo
+```
+
+### 2. Start the Live Platform
+No external database or API key setup is required to run the full application:
+```bash
+npm start
+```
+*(Or run `node serve.js` directly)*.
+
+The application starts immediately on:
+- **Local Machine:** `http://localhost:8085`
+- **Local Network (Phones & Tablets on same Wi-Fi):** `http://<YOUR_LOCAL_IP>:8085`
+
+---
+
+## 🌐 Public Access & Multi-Device Testing
+
+To share the application publicly with other users across cellular data (4G/5G) and home Wi-Fi:
+
+### Using Cloudflare Tunnel:
+```bash
+cloudflared tunnel --url http://127.0.0.1:8085
+```
+This generates a secure public URL (e.g. `https://your-tunnel.trycloudflare.com`) accessible from any smartphone or computer worldwide.
+
+### Multi-Device Verification Scenario:
+1. **Device A (Laptop):** Open the URL, click **Register**, create account `Aditya`, select `Knowledge Park`.
+2. **Device B (Phone):** Open the URL, click **Register**, create account `Anshika`, select `Knowledge Park`.
+3. **Instant Chat:** Send a message from Device A. Watch it appear instantly on Device B.
+4. **Community Choice:** On Device B, click `Pari Chowk`, then click **`[+ Join Group]`**. The button updates to **`Member ✓`** and the tab shows **`✓ Joined`**.
+5. **Destination Vote:** Both vote on an active departure option. See the vote count and progress bars synchronize in real time.
+6. **Ride Pooling:** Finalize the poll to see the shared auto/cab allocated with driver details and route tracking!
+
+---
+
+## 📁 Repository Structure
+
+```
+saathchalo/
+├── index.html              # Main customer-facing web application
+├── script.js               # Application logic, optimistic chat, community membership & map
+├── supabase-client.js      # Unified real-time client service (SSE & API integration)
+├── serve.js                # Embedded HTTP server, REST endpoints & SSE broadcast engine
+├── saath-db.json           # Seed database schema (users, communities, vote sessions, shuttles)
+├── supabase-schema.sql     # Complete PostgreSQL schema & RLS policies for cloud Supabase
+├── SUPABASE_SETUP.md       # Step-by-step setup guide for optional Supabase hosting
+├── test_core.js            # Automated unit tests for route matching and fare algorithms
+├── package.json            # Project manifest and start scripts
+└── README.md               # Product documentation & usage guide
+```
+
+---
+
+## 📜 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+*SAATHCHALO — Ek Raah, Kai Manzilein | Smarter • Safer • Shared Commutes*

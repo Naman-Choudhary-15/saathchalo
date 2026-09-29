@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAATHCHALO | Smarter Shared Commutes</title>
+    <title>SAATHCHALO | Smarter • Safer • Shared Commutes</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
     <script>
@@ -23,13 +23,18 @@
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .hero-bg {
             background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.8)), url('https://images.unsplash.com/photo-1596726918804-54c3756312a0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') center/cover;
         }
         /* Custom map styles */
-        .leaflet-routing-container { display: none !important; } 
+        .leaflet-routing-container { display: none !important; }
+        /* Scrollbar styles */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
     
     <!-- Leaflet JS & CSS -->
@@ -37,29 +42,95 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
     <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
-</head>
-<body class="bg-gray-50 text-gray-800">
 
-    <!-- Navigation -->
-    <nav class="fixed w-full z-50 bg-darkTheme/95 backdrop-blur-sm shadow-lg transition-all">
+    <!-- Supabase JS Client & App Service -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/env.js"></script>
+    <script src="supabase-client.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased selection:bg-brandYellow selection:text-darkTheme">
+
+    <!-- Main Navigation Bar -->
+    <nav class="fixed w-full z-40 bg-darkTheme/95 backdrop-blur-md shadow-lg transition-all border-b border-gray-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20 items-center">
-                <div class="flex-shrink-0 flex items-center gap-2">
-                    <i class="fa-solid fa-route text-brandYellow text-2xl"></i>
+                <!-- Brand Logo -->
+                <a href="#" class="flex-shrink-0 flex items-center gap-2 group">
+                    <i class="fa-solid fa-route text-brandYellow text-2xl group-hover:scale-110 transition-transform"></i>
                     <span class="font-bold text-2xl tracking-tight text-white">SAATH<span class="text-brandYellow">CHALO</span></span>
-                </div>
-                <div class="hidden md:flex space-x-8">
+                </a>
+
+                <!-- Desktop Navigation Links -->
+                <div class="hidden lg:flex items-center space-x-8">
                     <a href="#problem" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">The Problem</a>
-                    <a href="#solution" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Solution</a>
                     <a href="#booking" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Book a Ride</a>
                     <a href="#how-it-works" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">How it Works</a>
-                    <a href="#impact" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Impact</a>
+                    <a href="#shuttle" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Shuttle Schedule</a>
+                    <a href="#community" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Community</a>
+                    <a href="#live-map" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Live Map</a>
+                    <a href="#my-rides" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">My Rides</a>
                 </div>
+
+                <!-- Right Action / User Profile Area -->
+                <div class="flex items-center gap-3">
+                    <!-- State A: Logged Out Navigation -->
+                    <div id="loggedOutNav" class="flex items-center gap-2">
+                        <button onclick="openLoginModal()" class="text-gray-300 hover:text-brandYellow font-bold px-3 py-2 text-xs transition">
+                            Log In
+                        </button>
+                        <button onclick="openRegisterModal()" class="bg-brandYellow hover:bg-yellow-400 text-darkTheme font-bold px-4 py-2 rounded-xl text-xs transition shadow-md">
+                            Register
+                        </button>
+                    </div>
+
+                    <!-- State B: Logged In Navigation -->
+                    <div id="loggedInNav" class="hidden flex items-center gap-3">
+                        <!-- Fine Badge (if any) -->
+                        <span id="navFineBadge" class="hidden bg-red-600/90 text-white text-[11px] font-bold px-2.5 py-1 rounded-full animate-bounce">
+                            Fine: ₹50
+                        </span>
+
+                        <!-- Profile Trigger Button -->
+                        <button onclick="openProfileModal()" class="flex items-center gap-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 p-1.5 pr-3.5 rounded-full transition shadow-sm group">
+                            <img id="navUserAvatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="User Profile" class="w-8 h-8 rounded-full object-cover border-2 border-brandYellow">
+                            <div class="text-left hidden sm:block">
+                                <p class="text-xs font-bold text-white group-hover:text-brandYellow transition-colors" id="navUserName">Commuter</p>
+                                <p class="text-[10px] text-gray-400">Student Commuter</p>
+                            </div>
+                        </button>
+
+                        <!-- Sign Out Button -->
+                        <button onclick="handleLogout()" title="Sign Out" class="text-gray-400 hover:text-red-400 p-2 rounded-lg transition text-xs font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                            <span class="hidden md:inline">Logout</span>
+                        </button>
+                    </div>
+
+                    <!-- Mobile Menu Button -->
+                    <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="lg:hidden text-gray-300 hover:text-white p-2 rounded-lg" aria-label="Toggle Navigation Menu">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobileMenu" class="hidden lg:hidden bg-darkTheme border-b border-gray-800 px-4 pt-2 pb-4 space-y-2">
+            <a href="#problem" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">The Problem</a>
+            <a href="#booking" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Book a Ride</a>
+            <a href="#how-it-works" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">How it Works</a>
+            <a href="#shuttle" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Shuttle Schedule</a>
+            <a href="#community" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Community</a>
+            <a href="#live-map" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Live Map</a>
+            <a href="#my-rides" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">My Rides</a>
+            <div class="pt-2 flex gap-2">
+                <button onclick="document.getElementById('mobileMenu').classList.add('hidden'); openLoginModal();" class="flex-1 bg-gray-800 text-gray-200 font-bold py-2 rounded-xl text-xs">Log In</button>
+                <button onclick="document.getElementById('mobileMenu').classList.add('hidden'); openRegisterModal();" class="flex-1 bg-brandYellow text-darkTheme font-bold py-2 rounded-xl text-xs">Register</button>
             </div>
         </div>
     </nav>
 
-    <!-- Hero Section -->
+    <!-- Hero Section (Restored Original Layout) -->
     <section class="hero-bg min-h-screen flex items-center relative pt-20 overflow-hidden">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-20">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
@@ -86,7 +157,7 @@
                     </div>
                 </div>
                 
-                <!-- Hero Image Graphic -->
+                <!-- Hero Image Graphic (Restored Original) -->
                 <div class="hidden lg:block relative z-10">
                     <div class="absolute inset-0 bg-brandYellow rounded-full blur-[120px] opacity-20"></div>
                     <div class="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-800 transform rotate-3 hover:rotate-0 transition-transform duration-500">
@@ -107,7 +178,7 @@
         </div>
     </section>
 
-    <!-- The Problem Section -->
+    <!-- The Problem Section (Restored Original) -->
     <section id="problem" class="py-24 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
@@ -117,7 +188,7 @@
             </div>
 
             <!-- The Journey -->
-            <div class="relative max-w-5xl mx-auto mb-20">
+            <div class="relative max-w-5xl mx-auto mb-12">
                 <div class="absolute inset-0 flex items-center justify-center z-0 hidden md:flex">
                     <div class="w-full h-1 bg-gray-200"></div>
                 </div>
@@ -148,7 +219,7 @@
                             <i class="fa-solid fa-indian-rupee-sign"></i>
                         </div>
                         <h4 class="font-bold">4. Check Price & Negotiate</h4>
-                        <p class="text-sm text-gray-500">Surge pricing & bargaining (Peak Friction)</p>
+                        <p class="text-sm text-gray-500">Surge pricing & bargaining</p>
                     </div>
                     <div class="flex flex-col items-center text-center">
                         <div class="w-20 h-20 bg-white border-4 border-brandYellow rounded-full flex items-center justify-center text-2xl text-darkTheme mb-4 shadow-sm">
@@ -159,88 +230,11 @@
                     </div>
                 </div>
             </div>
-
-            <!-- The 5 Whys -->
-            <div class="bg-darkTheme rounded-3xl p-8 md:p-12 shadow-2xl max-w-4xl mx-auto text-white">
-                <h3 class="text-3xl font-bold mb-8">Why does this keep happening? (5 Whys)</h3>
-                <div class="space-y-4">
-                    <div class="bg-gray-800/50 p-4 rounded-xl border-l-4 border-gray-600 flex flex-col sm:flex-row gap-4">
-                        <div class="font-bold text-brandYellow sm:w-1/3">1. Why is the ride costly?</div>
-                        <div class="text-gray-300 sm:w-2/3">Because there are very few passengers paying the full fare.</div>
-                    </div>
-                    <div class="bg-gray-800/50 p-4 rounded-xl border-l-4 border-gray-600 flex flex-col sm:flex-row gap-4">
-                        <div class="font-bold text-brandYellow sm:w-1/3">2. Why few passengers?</div>
-                        <div class="text-gray-300 sm:w-2/3">There is no way to find people going in the exact same direction.</div>
-                    </div>
-                    <div class="bg-gray-800/50 p-4 rounded-xl border-l-4 border-gray-600 flex flex-col sm:flex-row gap-4">
-                        <div class="font-bold text-brandYellow sm:w-1/3">3. Why is there no way?</div>
-                        <div class="text-gray-300 sm:w-2/3">Current apps are car-centric, not built for auto-sharing at a micro-level.</div>
-                    </div>
-                    <div class="bg-gray-800/50 p-4 rounded-xl border-l-4 border-gray-600 flex flex-col sm:flex-row gap-4">
-                        <div class="font-bold text-brandYellow sm:w-1/3">4. Why not solved yet?</div>
-                        <div class="text-gray-300 sm:w-2/3">There is no real-time, dynamic route matching optimized for autos.</div>
-                    </div>
-                    <div class="bg-gray-800/50 p-6 rounded-xl border-l-4 border-brandYellow mt-6">
-                        <div class="font-bold text-brandYellow uppercase tracking-wider mb-2"><i class="fa-solid fa-bolt mr-2"></i>Root Cause</div>
-                        <div class="text-white text-xl">Lack of a simple, trusted, student-friendly shared auto ecosystem.</div>
-                    </div>
-                </div>
-            </div>
         </div>
     </section>
 
-    <!-- The Solution Section -->
-    <section id="solution" class="py-24 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-sm font-bold text-gray-500 tracking-widest uppercase mb-2 border-b-2 border-brandYellow inline-block pb-1">The Solution</h2>
-                <h3 class="text-4xl md:text-5xl font-extrabold text-darkTheme mb-4">Introducing <span class="text-brandYellow">SAATHCHALO</span></h3>
-                <p class="text-xl text-gray-600 max-w-2xl mx-auto">Route-based Shared Auto Platform for Students & Daily Commuters.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                <!-- Feature 1 -->
-                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group">
-                    <div class="w-16 h-16 mx-auto bg-brandYellowLight rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-users-rays text-3xl text-brandYellow"></i>
-                    </div>
-                    <h4 class="text-xl font-bold mb-3">Smart Matching</h4>
-                    <p class="text-gray-600">Find co-passengers heading on the exact same route instantly.</p>
-                </div>
-                <!-- Feature 2 -->
-                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group">
-                    <div class="w-16 h-16 mx-auto bg-brandYellowLight rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-wallet text-3xl text-brandYellow"></i>
-                    </div>
-                    <h4 class="text-xl font-bold mb-3">Shared Fare</h4>
-                    <p class="text-gray-600">Pay only your fair share. No haggling, no surge pricing anxiety.</p>
-                </div>
-                <!-- Feature 3 -->
-                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group">
-                    <div class="w-16 h-16 mx-auto bg-brandYellowLight rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-stopwatch text-3xl text-brandYellow"></i>
-                    </div>
-                    <h4 class="text-xl font-bold mb-3">Less Waiting</h4>
-                    <p class="text-gray-600">Get picked up faster as autos route to high-density requests.</p>
-                </div>
-                <!-- Feature 4 -->
-                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-shadow text-center group">
-                    <div class="w-16 h-16 mx-auto bg-brandYellowLight rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                        <i class="fa-solid fa-shield-halved text-3xl text-brandYellow"></i>
-                    </div>
-                    <h4 class="text-xl font-bold mb-3">Safer Commute</h4>
-                    <p class="text-gray-600">Travel safely with known, verified campus co-riders.</p>
-                </div>
-            </div>
-            
-            <div class="mt-12 bg-white rounded-2xl p-6 shadow border border-gray-200 text-center max-w-4xl mx-auto">
-                 <p class="text-lg"><strong><i class="fa-solid fa-lightbulb text-brandYellow mr-2"></i> Aha Moment:</strong> What if 3 students waiting at different spots (Knowledge Park, Sector 132, Alpha 1) were matched into <strong>1 Smart Route</strong>? Shared Ride • Happy Students.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- Booking Option Section -->
-    <section id="booking" class="py-24 bg-white border-t border-gray-100">
+    <!-- Booking Options Section (Restored Original) -->
+    <section id="booking" class="py-24 bg-gray-50 border-t border-gray-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
                 <h2 class="text-sm font-bold text-gray-500 tracking-widest uppercase mb-2 border-b-2 border-brandYellow inline-block pb-1">Ready to Ride?</h2>
@@ -250,24 +244,24 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 <!-- Method 1: Community Service -->
-                <div class="bg-gray-50 p-8 rounded-2xl shadow-lg border border-gray-100 hover:-translate-y-2 transition-transform text-center flex flex-col h-full">
+                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:-translate-y-2 transition-transform text-center flex flex-col h-full">
                     <div class="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-6">
                         <i class="fa-solid fa-handshake-angle text-4xl text-green-600"></i>
                     </div>
                     <h4 class="text-2xl font-bold mb-3 text-darkTheme">Community Service</h4>
                     <p class="text-gray-600 flex-grow mb-6">Student-driven carpooling and community rides. Built on trust and mutual help.</p>
-                    <button onclick="openBookingModal('Community Service', '₹0 - ₹10', 'fa-handshake-angle', 'text-green-600')" class="w-full bg-darkTheme text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">Book Community Ride</button>
+                    <a href="#community" class="w-full bg-darkTheme text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition block">Book Community Ride</a>
                 </div>
 
                 <!-- Method 2: Shuttle Service -->
-                <div class="bg-gray-50 p-8 rounded-2xl shadow-lg border border-gray-100 hover:-translate-y-2 transition-transform text-center flex flex-col h-full relative overflow-hidden">
+                <div class="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 hover:-translate-y-2 transition-transform text-center flex flex-col h-full relative overflow-hidden">
                     <div class="absolute top-0 right-0 bg-brandYellow text-darkTheme text-xs font-bold px-3 py-1 rounded-bl-lg">POPULAR</div>
                     <div class="w-20 h-20 mx-auto bg-blue-100 rounded-full flex items-center justify-center mb-6">
                         <i class="fa-solid fa-van-shuttle text-4xl text-blue-600"></i>
                     </div>
                     <h4 class="text-2xl font-bold mb-3 text-darkTheme">Shuttle Service</h4>
                     <p class="text-gray-600 flex-grow mb-6">Fixed-route campus shuttles running on scheduled timings. Best for regular large-group commutes.</p>
-                    <button onclick="openBookingModal('Shuttle Service', '₹20.00', 'fa-van-shuttle', 'text-blue-600')" class="w-full bg-darkTheme text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition">View Shuttle Schedule</button>
+                    <a href="#shuttle" class="w-full bg-darkTheme text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition block">View Shuttle Schedule</a>
                 </div>
 
                 <!-- Method 3: Auto Service -->
@@ -277,7 +271,7 @@
                     </div>
                     <h4 class="text-2xl font-bold mb-3 text-darkTheme">Auto Service</h4>
                     <p class="text-gray-600 flex-grow mb-6">Dynamic route-matching for shared auto-rickshaws. Fast, affordable, and on-demand.</p>
-                    <button onclick="openBookingModal('Auto Service', '₹35.00', 'fa-taxi', 'text-brandYellow')" class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition shadow-md">Book Auto Now</button>
+                    <button onclick="openBookingModal('Auto Service', '₹24.67', 'fa-taxi', 'text-brandYellow')" class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition shadow-md">Book Auto Now</button>
                 </div>
 
                 <!-- Method 4: Live Pooling -->
@@ -288,13 +282,13 @@
                     </div>
                     <h4 class="text-2xl font-bold mb-3 text-darkTheme">Live Pooling</h4>
                     <p class="text-gray-600 flex-grow mb-6">Hop into an auto already en route to your destination. Fill empty seats & ride super cheap!</p>
-                    <button onclick="openBookingModal('Live Pooling', '₹15.00', 'fa-bolt', 'text-purple-600', true)" class="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 rounded-xl hover:from-purple-700 hover:to-pink-600 transition shadow-md shadow-purple-500/30">Find Active Autos</button>
+                    <button onclick="openBookingModal('Live Pooling', '₹20.00', 'fa-bolt', 'text-purple-600', true)" class="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 rounded-xl hover:from-purple-700 hover:to-pink-600 transition shadow-md shadow-purple-500/30">Find Active Autos</button>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- How it Works Section -->
+    <!-- How it Works Section (Restored Original) -->
     <section id="how-it-works" class="py-24 bg-darkTheme text-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
@@ -334,7 +328,7 @@
                                 <span class="text-xs text-gray-400">Total Est.</span>
                                 <span class="font-bold text-xl text-brandYellow">₹35.00 <span class="text-xs text-gray-400 font-normal">Your split</span></span>
                             </div>
-                            <button class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition">CONFIRM SHARE</button>
+                            <button onclick="openBookingModal('Auto Service', '₹24.67', 'fa-taxi', 'text-brandYellow')" class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition">CONFIRM SHARE</button>
                         </div>
                     </div>
                 </div>
@@ -359,20 +353,20 @@
                         <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">3</div>
                         <div>
                             <h4 class="text-xl font-bold mb-1">Route Gen</h4>
-                            <p class="text-gray-400">System finds the most efficient, detour-free route for the auto. Inspired by Dijkstra's algorithm.</p>
+                            <p class="text-gray-400">System finds the most efficient, detour-free route for the shared ride.</p>
                         </div>
                     </div>
                     <div class="flex items-start">
                         <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">4</div>
                         <div>
                             <h4 class="text-xl font-bold mb-1">Pickup</h4>
-                            <p class="text-gray-400">Auto collects all passengers sequentially in the shortest path, balancing time for all riders.</p>
+                            <p class="text-gray-400">Vehicle collects passengers sequentially in the shortest path.</p>
                         </div>
                     </div>
                     <div class="flex items-start">
                         <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">5</div>
                         <div>
-                            <h4 class="text-xl font-bold mb-1">Auto-Pay</h4>
+                            <h4 class="text-xl font-bold mb-1">Shared Pay</h4>
                             <p class="text-gray-400">Each student pays only their fraction of the total fare automatically.</p>
                         </div>
                     </div>
@@ -381,160 +375,596 @@
         </div>
     </section>
 
-    <!-- Stakeholders & Impact Section -->
-    <section id="impact" class="py-24 bg-white">
+    <!-- Shuttle Schedule Section -->
+    <section id="shuttle" class="py-20 bg-gray-50 border-t border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-sm font-bold text-gray-500 tracking-widest uppercase mb-2 border-b-2 border-brandYellow inline-block pb-1">The Future</h2>
-                <h3 class="text-4xl font-extrabold text-darkTheme mb-4">Small change. <span class="text-brandYellow">Big difference.</span></h3>
-                <p class="text-xl text-gray-600">Shared rides. Shared benefits.</p>
-            </div>
-
-            <!-- Stakeholders Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-                <div class="bg-gray-50 rounded-2xl overflow-hidden shadow border border-gray-100 transition hover:-translate-y-2 duration-300">
-                    <div class="h-32 bg-blue-100 flex items-center justify-center">
-                        <i class="fa-solid fa-user-graduate text-5xl text-blue-500"></i>
-                    </div>
-                    <div class="p-6">
-                        <h4 class="font-bold text-xl mb-4 text-center border-b pb-2">Students</h4>
-                        <ul class="space-y-3 text-gray-600">
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Significantly lower fares</li>
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Reduced waiting times</li>
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Safer travel with known peers</li>
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Easy digital booking</li>
-                        </ul>
-                    </div>
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-12 gap-4">
+                <div>
+                    <span class="text-xs font-black text-gray-500 tracking-widest uppercase mb-1 border-b-2 border-brandYellow inline-block pb-0.5">Fixed Timing Transits</span>
+                    <h2 class="text-3xl sm:text-4xl font-black text-darkTheme">Campus <span class="text-brandYellow">Shuttle Schedule</span></h2>
+                    <p class="text-sm text-gray-600 mt-1">Reliable, air-conditioned shuttles connecting major student hubs.</p>
                 </div>
-                <div class="bg-gray-50 rounded-2xl overflow-hidden shadow border border-gray-100 transition hover:-translate-y-2 duration-300">
-                    <div class="h-32 bg-yellow-100 flex items-center justify-center">
-                        <i class="fa-solid fa-taxi text-5xl text-yellow-600"></i>
-                    </div>
-                    <div class="p-6">
-                        <h4 class="font-bold text-xl mb-4 text-center border-b pb-2">Auto Drivers</h4>
-                        <ul class="space-y-3 text-gray-600">
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> More passengers per trip</li>
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Higher total daily earnings</li>
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Less idle waiting time</li>
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Clear digital allocation</li>
-                        </ul>
-                    </div>
-                </div>
-                <div class="bg-gray-50 rounded-2xl overflow-hidden shadow border border-gray-100 transition hover:-translate-y-2 duration-300">
-                    <div class="h-32 bg-green-100 flex items-center justify-center">
-                        <i class="fa-solid fa-city text-5xl text-green-600"></i>
-                    </div>
-                    <div class="p-6">
-                        <h4 class="font-bold text-xl mb-4 text-center border-b pb-2">City & Society</h4>
-                        <ul class="space-y-3 text-gray-600">
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Fewer autos congesting roads</li>
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Reduced carbon emissions</li>
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Smarter urban mobility</li>
-                            <li><i class="fa-solid fa-check text-green-500 mr-2 w-5 text-center"></i> Efficient use of resources</li>
-                        </ul>
-                    </div>
+                <div class="bg-white p-1 rounded-2xl border border-gray-200 flex gap-1 shadow-sm">
+                    <button class="bg-darkTheme text-white text-xs font-bold px-4 py-2 rounded-xl">All Routes</button>
+                    <button class="text-gray-600 hover:text-darkTheme text-xs font-bold px-4 py-2 rounded-xl">Morning</button>
+                    <button class="text-gray-600 hover:text-darkTheme text-xs font-bold px-4 py-2 rounded-xl">Evening Peak</button>
                 </div>
             </div>
 
-            <!-- Big Stats -->
-            <div class="bg-darkTheme text-white rounded-3xl p-10 md:p-16 shadow-2xl relative overflow-hidden">
-                <div class="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-brandYellow rounded-full opacity-10"></div>
-                <h4 class="text-center text-3xl font-bold mb-12 text-brandYellow">Let's make commuting smarter, together.</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                    <div class="text-center">
-                        <div class="text-4xl md:text-5xl font-extrabold mb-3 text-white">↓ 30%</div>
-                        <p class="text-gray-400">Fewer autos on road<br>(Lower emissions)</p>
+            <!-- Shuttle Cards Grid -->
+            <div id="shuttleGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Dynamically populated by renderShuttlesUI() -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Community Section: Two-Step System -->
+    <section id="community" class="py-20 bg-darkTheme text-white border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-14">
+                <span class="text-xs font-black text-brandYellow tracking-widest uppercase mb-1 border-b-2 border-brandYellow inline-block pb-0.5">Community Transit</span>
+                <h2 class="text-3xl sm:text-4xl font-black mb-3">Local Area Community & <span class="text-brandYellow">Ride Voting</span></h2>
+                <p class="text-sm sm:text-base text-gray-400 max-w-2xl mx-auto">
+                    Coordinate with verified commuters in your locality. Chat with peers and vote on daily shared departures.
+                </p>
+            </div>
+
+            <!-- Area Selector Tabs -->
+            <div class="flex items-center justify-between gap-3 overflow-x-auto pb-4 mb-8">
+                <div class="flex items-center gap-2 overflow-x-auto">
+                    <button onclick="switchCommunityGroup('knowledge-park')" data-group="knowledge-park" class="community-group-tab bg-brandYellow text-darkTheme font-bold px-5 py-2.5 rounded-full text-xs whitespace-nowrap transition shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-graduation-cap"></i> <span>Knowledge Park</span>
+                        <span id="tabBadge-knowledge-park" class="tab-joined-badge hidden text-[9px] bg-green-500/20 text-green-400 border border-green-500/40 px-1.5 py-0.2 rounded-full font-bold">✓ Joined</span>
+                    </button>
+                    <button onclick="switchCommunityGroup('pari-chowk')" data-group="pari-chowk" class="community-group-tab bg-gray-800 text-gray-300 hover:text-white px-5 py-2.5 rounded-full text-xs whitespace-nowrap transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-nodes"></i> <span>Pari Chowk</span>
+                        <span id="tabBadge-pari-chowk" class="tab-joined-badge hidden text-[9px] bg-green-500/20 text-green-400 border border-green-500/40 px-1.5 py-0.2 rounded-full font-bold">✓ Joined</span>
+                    </button>
+                    <button onclick="switchCommunityGroup('alpha-1')" data-group="alpha-1" class="community-group-tab bg-gray-800 text-gray-300 hover:text-white px-5 py-2.5 rounded-full text-xs whitespace-nowrap transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-building"></i> <span>Alpha 1 & 2</span>
+                        <span id="tabBadge-alpha-1" class="tab-joined-badge hidden text-[9px] bg-green-500/20 text-green-400 border border-green-500/40 px-1.5 py-0.2 rounded-full font-bold">✓ Joined</span>
+                    </button>
+                    <button onclick="switchCommunityGroup('noida-sec-62')" data-group="noida-sec-62" class="community-group-tab bg-gray-800 text-gray-300 hover:text-white px-5 py-2.5 rounded-full text-xs whitespace-nowrap transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-city"></i> <span>Noida Sector 62</span>
+                        <span id="tabBadge-noida-sec-62" class="tab-joined-badge hidden text-[9px] bg-green-500/20 text-green-400 border border-green-500/40 px-1.5 py-0.2 rounded-full font-bold">✓ Joined</span>
+                    </button>
+                    <button onclick="switchCommunityGroup('ghaziabad')" data-group="ghaziabad" class="community-group-tab bg-gray-800 text-gray-300 hover:text-white px-5 py-2.5 rounded-full text-xs whitespace-nowrap transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-train-subway"></i> <span>Ghaziabad Terminal</span>
+                        <span id="tabBadge-ghaziabad" class="tab-joined-badge hidden text-[9px] bg-green-500/20 text-green-400 border border-green-500/40 px-1.5 py-0.2 rounded-full font-bold">✓ Joined</span>
+                    </button>
+                </div>
+                <button onclick="openCommunitiesModal()" class="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-bold bg-gray-800 text-gray-300 hover:text-brandYellow hover:bg-gray-700/80 transition border border-gray-700 whitespace-nowrap shadow-sm flex-shrink-0">
+                    <i class="fa-solid fa-compass"></i> Explore All Groups
+                </button>
+            </div>
+
+            <!-- Two Step Grid: Chat (Step 1) + Voting (Step 2) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- STEP 1: Area Group Chat (7 cols) -->
+                <div class="lg:col-span-7 bg-gray-900/90 rounded-3xl p-6 border border-gray-800 flex flex-col h-[520px]">
+                    <div class="flex flex-wrap justify-between items-center gap-3 pb-4 border-b border-gray-800 mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center text-brandYellow text-lg flex-shrink-0">
+                                <i id="currentCommunityIcon" class="fa-solid fa-comments"></i>
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h3 id="currentCommunityTitle" class="font-extrabold text-sm text-white">Knowledge Park Commuters</h3>
+                                    <span id="currentCommunityMemberBadge" class="hidden text-[10px] font-bold text-green-400 bg-green-500/15 border border-green-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                        <i class="fa-solid fa-circle-check"></i> Member
+                                    </span>
+                                </div>
+                                <p class="text-[11px] text-gray-400">Strict Privacy: Only Display Name & Avatar are visible</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <div id="communityActionContainer" class="flex items-center">
+                                <!-- Populated dynamically by renderCommunityJoinUI() -->
+                            </div>
+                            <span id="communityPresenceBadge" class="text-[11px] font-bold text-green-400 bg-green-500/10 px-2.5 py-1 rounded-full border border-green-500/20 flex items-center gap-1.5 whitespace-nowrap">
+                                <span class="w-2 h-2 rounded-full bg-green-400 animate-ping"></span> 18 Active
+                            </span>
+                        </div>
                     </div>
-                    <div class="text-center">
-                        <div class="text-4xl md:text-5xl font-extrabold mb-3 text-brandYellow">↓ 40-50%</div>
-                        <p class="text-gray-400">Average commute cost<br>reduction for students</p>
+
+                    <!-- Message Feed -->
+                    <div id="chatMessagesContainer" class="flex-1 overflow-y-auto pr-2 space-y-3">
+                        <!-- Populated by renderCommunityChat() -->
                     </div>
-                    <div class="text-center">
-                        <div class="text-4xl md:text-5xl font-extrabold mb-3 text-white">↓ 50%</div>
-                        <p class="text-gray-400">Waiting time decreased<br>at busy campus spots</p>
+
+                    <!-- Input Bar -->
+                    <div class="pt-4 border-t border-gray-800 flex gap-2">
+                        <input type="text" id="chatInput" placeholder="Message verified commuters in this area..." class="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:ring-2 focus:ring-brandYellow outline-none transition">
+                        <button type="button" onclick="sendCommunityChatMessage()" class="bg-brandYellow hover:bg-yellow-400 text-darkTheme font-bold px-5 py-3 rounded-xl text-xs transition shadow-md flex items-center gap-1.5 flex-shrink-0">
+                            <span>Send</span> <i class="fa-solid fa-paper-plane"></i>
+                        </button>
                     </div>
-                    <div class="text-center">
-                        <div class="text-4xl md:text-5xl font-extrabold mb-3 text-brandYellow">1000+</div>
-                        <p class="text-gray-400">Students can benefit in<br>our campus & city alone</p>
+                </div>
+
+                <!-- STEP 2: Destination Voting (5 cols) -->
+                <div class="lg:col-span-5 space-y-6">
+                    <!-- Voting Box -->
+                    <div class="bg-gray-900/90 rounded-3xl p-6 border border-gray-800">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <span class="text-[10px] font-extrabold text-brandYellow uppercase tracking-wider bg-brandYellow/10 px-2 py-0.5 rounded">SHARED COMMUTE</span>
+                                <h3 class="text-lg font-black text-white mt-1">Plan a Shared Ride</h3>
+                                <p class="text-xs text-gray-400">Where are you heading today? Vote to pool together.</p>
+                            </div>
+                            <span class="text-xs font-mono font-bold text-gray-400">Ends 6:15 PM</span>
+                        </div>
+
+                        <!-- Live Vote Destination Options -->
+                        <div id="communityVotingWidget" class="mb-5">
+                            <!-- Populated by renderCommunityVotes() -->
+                        </div>
+
+                        <!-- Close Voting Action -->
+                        <div class="pt-3 border-t border-gray-800 flex gap-2">
+                            <button onclick="closeVotingAndAllocateVehicle()" class="w-full bg-gray-800 hover:bg-gray-700 text-brandYellow border border-gray-700 font-bold py-2.5 rounded-xl text-xs transition">
+                                <i class="fa-solid fa-calendar-check mr-1.5"></i> Finalize Voting & Confirm Departure
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Vehicle Allocation Result Banner -->
+                    <div id="communityAllocationBanner" class="hidden">
+                        <!-- Populated by closeVotingAndAllocateVehicle() -->
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
+    <!-- Commuter Avatar Map & Live Pooling -->
+    <section id="live-map" class="py-20 bg-white border-t border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
+                <div>
+                    <h2 class="text-3xl sm:text-4xl font-black text-darkTheme">Live <span class="text-brandYellow">Commuter Map</span></h2>
+                    <p class="text-sm text-gray-600 mt-1">See active verified commuters heading in your direction with live community pooling.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="openBookingModal('Live Pooling', '₹20.00', 'fa-bolt', 'text-purple-600', true)" class="bg-darkTheme text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-brandYellow hover:text-darkTheme transition">
+                        Hop In En Route
+                    </button>
+                </div>
+            </div>
+
+            <!-- Map Frame with Customer-Friendly Sidebar -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <!-- Interactive Leaflet Map (8 cols) -->
+                <div class="lg:col-span-8 bg-gray-100 rounded-3xl overflow-hidden shadow-xl border border-gray-200 h-[480px] relative">
+                    <div id="communityMapContainer" class="w-full h-full"></div>
+                    <!-- Live Legend Overlay -->
+                    <div class="absolute bottom-4 left-4 z-[500] bg-darkTheme/90 backdrop-blur text-white text-[11px] p-3 rounded-2xl border border-gray-700 space-y-1.5 shadow-lg">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-brandYellow border border-white"></span>
+                            <span>Student Commuter (Tap to view)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                            <span>High-Density Commuter Pool</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-5 h-0.5 bg-brandYellow border-t border-dashed border-darkTheme"></div>
+                            <span>Shared Commute Route</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Community Cards (4 cols) -->
+                <div class="lg:col-span-4 space-y-5">
+                    <!-- Live Route Sharing Card -->
+                    <div class="bg-gray-50 p-6 rounded-3xl border border-gray-200 shadow-sm">
+                        <h3 class="font-extrabold text-base text-darkTheme mb-1 flex items-center gap-2">
+                            <i class="fa-solid fa-users text-brandYellow"></i> Active Route Pooling
+                        </h3>
+                        <p class="text-xs text-gray-500 mb-4">Connect with verified student commuters heading along the same corridor.</p>
+
+                        <div class="space-y-3 text-xs">
+                            <div class="flex justify-between items-center p-2.5 bg-white rounded-xl border border-gray-100">
+                                <span class="text-gray-600">Active Campus Corridor</span>
+                                <span class="font-bold text-darkTheme">Knowledge Park → Pari Chowk</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2.5 bg-white rounded-xl border border-gray-100">
+                                <span class="text-gray-600">Average Pickup Proximity</span>
+                                <span class="font-bold text-green-600">Within Campus Gate</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2.5 bg-white rounded-xl border border-gray-100">
+                                <span class="text-gray-600">Evening Commute Window</span>
+                                <span class="font-bold text-darkTheme">6:00 PM – 7:30 PM</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Commute Priority Card -->
+                    <div class="bg-darkTheme text-white p-6 rounded-3xl shadow-lg border border-gray-800">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-extrabold text-sm text-brandYellow">Smart Allocation Priority</h3>
+                            <span class="text-[10px] bg-green-500/20 text-green-400 font-bold px-2 py-0.5 rounded">Active</span>
+                        </div>
+                        <p class="text-xs text-gray-300 mb-3">Your ride is automatically prioritized based on confirmed reservations and community participation.</p>
+                        <div class="bg-gray-800 p-3 rounded-xl text-xs space-y-1 font-mono text-gray-300">
+                            <div>✓ Confirmed Ride Pass Holders</div>
+                            <div>✓ Community Group Participants</div>
+                            <div>✓ Regular Scheduled Commuters</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- My Rides Section -->
+    <section id="my-rides" class="py-20 bg-gray-50 border-t border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-10 gap-4">
+                <div>
+                    <span class="text-xs font-black text-gray-500 tracking-widest uppercase mb-1 border-b-2 border-brandYellow inline-block pb-0.5">My Account</span>
+                    <h2 class="text-3xl sm:text-4xl font-black text-darkTheme">My Bookings & <span class="text-brandYellow">Ride Status</span></h2>
+                    <p class="text-sm text-gray-600 mt-1">Review your active passes and confirmed ride history.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="openBookingModal('Auto Service', '₹24.67', 'fa-taxi', 'text-brandYellow')" class="bg-brandYellow text-darkTheme font-bold px-4 py-2.5 rounded-xl text-xs hover:bg-yellow-400 transition shadow">
+                        <i class="fa-solid fa-plus mr-1"></i> New Ride Request
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bookings List -->
+            <div id="myBookingsList" class="space-y-4">
+                <!-- Dynamically populated by renderMyBookingsUI() -->
+            </div>
+        </div>
+    </section>
+
     <!-- Footer -->
-    <footer class="bg-gray-900 text-gray-400 py-12 border-t border-gray-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center">
-            <div class="flex items-center gap-2 mb-4 md:mb-0">
+    <footer class="bg-darkTheme text-gray-400 py-12 border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-2.5">
                 <i class="fa-solid fa-route text-brandYellow text-2xl"></i>
                 <span class="font-bold text-xl text-white">SAATH<span class="text-brandYellow">CHALO</span></span>
             </div>
-            <p class="text-sm">Design Thinking Project Prototype. Developed for Adarsh and every student commuter.</p>
+            <p class="text-xs text-gray-400 text-center md:text-right">
+                Design Thinking Project Prototype. Developed for every student commuter.
+            </p>
         </div>
     </footer>
 
     <!-- Floating Action Button for Live Booking -->
-    <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-[90]">
-        <button onclick="openBookingModal('Live Pooling', '₹15.00', 'fa-bolt', 'text-purple-600', true)" class="relative flex items-center justify-center bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-full px-6 py-4 shadow-[0_10px_25px_-5px_rgba(147,51,234,0.6)] hover:scale-105 hover:-translate-y-1 transition-all duration-300 group">
+    <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-30">
+        <button onclick="openBookingModal('Live Pooling', '₹20.00', 'fa-bolt', 'text-purple-600', true)" class="relative flex items-center justify-center bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-full px-6 py-4 shadow-[0_10px_25px_-5px_rgba(147,51,234,0.6)] hover:scale-105 hover:-translate-y-1 transition-all duration-300 group">
             <span class="absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-40 animate-ping"></span>
             <i class="fa-solid fa-bolt text-xl mr-3 relative z-10"></i>
-            <span class="font-bold text-sm tracking-wide relative z-10">LIVE BOOKING</span>
+            <span class="font-bold text-xs sm:text-sm tracking-wide relative z-10">LIVE BOOKING</span>
         </button>
     </div>
 
-    <!-- Booking Modal -->
-    <div id="bookingModal" class="fixed inset-0 z-[100] hidden bg-gray-900/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col md:flex-row overflow-hidden relative">
+    <!-- ========================================== -->
+    <!-- MODALS: BOOKING & LIVE TRACKING MODAL       -->
+    <!-- ========================================== -->
+    <div id="bookingModal" class="fixed inset-0 z-50 hidden bg-darkTheme/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-[92vh] flex flex-col md:flex-row overflow-hidden relative border border-gray-800">
             <!-- Close Button -->
-            <button onclick="closeModal()" class="absolute top-4 right-4 z-[110] bg-white text-gray-800 w-10 h-10 rounded-full shadow-md flex items-center justify-center hover:bg-gray-100">
+            <button onclick="closeModal()" class="absolute top-4 right-4 z-50 bg-white/90 text-darkTheme w-10 h-10 rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition border border-gray-200">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
             
-            <!-- Left Panel: Controls -->
-            <div class="w-full md:w-1/3 bg-gray-50 p-6 md:p-8 flex flex-col h-full overflow-y-auto border-r border-gray-200">
-                <h3 class="text-2xl font-bold text-darkTheme mb-2" id="modalTitle">Book a Ride</h3>
-                <p class="text-gray-500 mb-6 text-sm" id="modalSubtitle">Select your pickup and drop locations.</p>
+            <!-- Left Panel: Controls, Fare Summary & Live Tracking -->
+            <div class="w-full md:w-2/5 bg-gray-50 p-6 md:p-8 flex flex-col h-full overflow-y-auto border-r border-gray-200">
                 
-                <div class="relative pl-8 mb-6">
-                    <!-- timeline line -->
-                    <div class="absolute left-3.5 top-4 bottom-4 w-0.5 bg-gray-300"></div>
-                    <div class="relative mb-4">
-                        <div class="absolute -left-8 top-1 w-3 h-3 bg-brandYellow rounded-full border-2 border-white shadow"></div>
-                        <input type="text" id="pickupInput" placeholder="Pickup location" class="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brandYellow outline-none transition" value="Knowledge Park, Greater Noida">
-                    </div>
-                    <div class="relative">
-                        <div class="absolute -left-8 top-1 w-3 h-3 bg-darkTheme rounded-full border-2 border-white shadow"></div>
-                        <input type="text" id="dropoffInput" placeholder="Drop-off location" class="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brandYellow outline-none transition" value="Alpha 1, Greater Noida">
-                    </div>
-                </div>
-                
-                <button onclick="calculateRoute()" class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-xl hover:bg-gray-300 transition mb-6">Calculate Route</button>
-                
-                <div id="rideDetails" class="hidden flex-col gap-4 mb-6">
-                    <div class="bg-white p-4 rounded-xl border border-brandYellow shadow-sm flex justify-between items-center">
-                        <div>
-                            <h4 class="font-bold text-darkTheme flex items-center gap-2"><i id="serviceIcon" class="fa-solid fa-taxi text-brandYellow"></i> <span id="selectedService">Auto Service</span></h4>
-                            <p class="text-xs text-gray-500">Shared ride • 3 mins away</p>
+                <!-- State A: Booking Input Panel -->
+                <div id="bookingInputPanel" class="flex flex-col h-full">
+                    <h3 class="text-2xl font-bold text-darkTheme mb-1" id="modalTitle">Book a Ride</h3>
+                    <p class="text-gray-500 mb-6 text-xs" id="modalSubtitle">Select your pickup and drop locations.</p>
+                    
+                    <div class="relative pl-8 mb-4">
+                        <!-- timeline line -->
+                        <div class="absolute left-3.5 top-4 bottom-4 w-0.5 bg-gray-300"></div>
+                        <div class="relative mb-3">
+                            <div class="absolute -left-8 top-3 w-3 h-3 bg-brandYellow rounded-full border-2 border-white shadow"></div>
+                            <input type="text" id="pickupInput" placeholder="Pickup location" class="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brandYellow outline-none text-xs font-semibold text-darkTheme transition" value="Knowledge Park, Greater Noida">
                         </div>
-                        <div class="text-right">
-                            <h4 class="font-bold text-xl text-darkTheme" id="ridePrice">₹35.00</h4>
-                            <p class="text-xs text-gray-400"><del>₹80.00</del></p>
+                        <div class="relative">
+                            <div class="absolute -left-8 top-3 w-3 h-3 bg-darkTheme rounded-full border-2 border-white shadow"></div>
+                            <input type="text" id="dropoffInput" placeholder="Drop-off location" class="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-brandYellow outline-none text-xs font-semibold text-darkTheme transition" value="Alpha 1, Greater Noida">
                         </div>
                     </div>
+
+                    <!-- Location Shortcuts -->
+                    <div class="flex flex-wrap gap-1.5 mb-4">
+                        <button onclick="document.getElementById('dropoffInput').value='Pari Chowk, Greater Noida'; calculateRoute();" class="text-[10px] font-bold bg-gray-200 hover:bg-brandYellow text-darkTheme px-2.5 py-1 rounded-lg transition">Pari Chowk</button>
+                        <button onclick="document.getElementById('dropoffInput').value='Alpha 1, Greater Noida'; calculateRoute();" class="text-[10px] font-bold bg-gray-200 hover:bg-brandYellow text-darkTheme px-2.5 py-1 rounded-lg transition">Alpha 1</button>
+                        <button onclick="document.getElementById('dropoffInput').value='Sector 62, Noida'; calculateRoute();" class="text-[10px] font-bold bg-gray-200 hover:bg-brandYellow text-darkTheme px-2.5 py-1 rounded-lg transition">Noida Sec 62</button>
+                        <button onclick="document.getElementById('dropoffInput').value='Ghaziabad Central Bus Terminal'; calculateRoute();" class="text-[10px] font-bold bg-gray-200 hover:bg-brandYellow text-darkTheme px-2.5 py-1 rounded-lg transition">Ghaziabad</button>
+                    </div>
+
+                    <button id="calculateRouteBtn" onclick="calculateRoute()" class="w-full bg-gray-200 text-darkTheme font-bold py-2.5 rounded-xl hover:bg-gray-300 transition mb-4 text-xs">
+                        <i class="fa-solid fa-route mr-1.5"></i> Calculate Route
+                    </button>
+                    
+                    <!-- Dynamic Details -->
+                    <div id="rideDetails" class="hidden flex-col gap-3 mb-4">
+                        <!-- Populated by renderRouteCalculationUI() -->
+                    </div>
+                    
+                    <div class="mt-auto pt-4 border-t border-gray-200">
+                        <button id="confirmRideBtn" class="w-full bg-brandYellow text-darkTheme font-bold py-4 rounded-2xl hover:bg-yellow-400 transition shadow-lg text-sm">
+                            Confirm Ride
+                        </button>
+                    </div>
                 </div>
-                
-                <div class="mt-auto pt-4">
-                    <button id="confirmRideBtn" disabled class="w-full bg-brandYellow text-darkTheme font-bold py-4 rounded-xl hover:bg-yellow-400 transition shadow-md opacity-50 cursor-not-allowed">Confirm Ride</button>
+
+                <!-- State B: Active Live Tracking Panel -->
+                <div id="activeTrackingPanel" class="hidden">
+                    <!-- Populated by startLiveTrackingState() -->
                 </div>
+
             </div>
             
-            <!-- Right Panel: Map -->
-            <div class="w-full md:w-2/3 h-64 md:h-full relative bg-gray-200" id="mapContainer">
+            <!-- Right Panel: Leaflet Map -->
+            <div class="w-full md:w-3/5 h-64 md:h-full relative bg-gray-200" id="mapContainer">
                 <!-- Leaflet map -->
             </div>
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- MODAL: ₹50 NO-SHOW WARNING MODAL           -->
+    <!-- ========================================== -->
+    <div id="voteConfirmModal" class="fixed inset-0 z-50 hidden bg-darkTheme/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 border-2 border-brandYellow text-darkTheme animate-in fade-in zoom-in duration-200">
+            <div class="w-14 h-14 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto text-2xl mb-4">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            
+            <h3 class="text-xl font-bold text-center mb-1 text-darkTheme">Confirm your vote</h3>
+            
+            <div class="text-center my-3">
+                <span class="text-xs text-gray-500 block uppercase tracking-wider font-semibold">Destination:</span>
+                <span id="voteTargetDestination" class="text-base font-extrabold text-darkTheme bg-brandYellow/20 px-3 py-1 rounded-lg inline-block mt-0.5">Pari Chowk</span>
+            </div>
+
+            <p class="text-xs text-gray-600 text-center mb-4 leading-relaxed">
+                Your vote will be used to help organize shared transportation for the community.
+            </p>
+
+            <div class="bg-yellow-50 border border-brandYellow rounded-2xl p-4 mb-6 text-xs text-gray-700 leading-relaxed">
+                If you confirm participation in the arranged ride and later fail to participate or cancel after the applicable cutoff, a <strong>₹50 no-show/cancellation consequence</strong> may apply.
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="closeVoteWarningModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-xl text-xs transition">
+                    Cancel
+                </button>
+                <button onclick="confirmVoteSubmission()" class="flex-1 bg-brandYellow hover:bg-yellow-400 text-darkTheme font-bold py-3 rounded-xl text-xs transition shadow-md">
+                    Confirm Vote
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: REAL LOGIN MODAL                    -->
+    <!-- ========================================== -->
+    <div id="loginModal" class="fixed inset-0 z-50 hidden bg-darkTheme/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-darkTheme border border-gray-800 rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-8 text-white relative animate-in fade-in zoom-in duration-200">
+            <!-- Close Button -->
+            <button onclick="closeLoginModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-brandYellow/10 border border-brandYellow/30 rounded-2xl flex items-center justify-center text-brandYellow text-xl">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-black text-white">Log in to SAATH<span class="text-brandYellow">CHALO</span></h3>
+                    <p class="text-xs text-gray-400">Access real-time communities, chat & live pooling</p>
+                </div>
+            </div>
+
+            <!-- Error message container -->
+            <div id="loginErrorBox" class="hidden bg-red-900/40 border border-red-500/50 text-red-200 p-3 rounded-xl text-xs mb-4"></div>
+
+            <form onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Email Address</label>
+                    <input type="email" id="loginEmail" required placeholder="aditya@example.com" class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:ring-2 focus:ring-brandYellow outline-none transition">
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1.5">
+                        <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider">Password</label>
+                        <button type="button" onclick="alert('If configured with email verification, Supabase will dispatch a password reset token.')" class="text-[11px] text-brandYellow hover:underline">Forgot Password?</button>
+                    </div>
+                    <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:ring-2 focus:ring-brandYellow outline-none transition">
+                </div>
+
+                <button type="submit" id="loginSubmitBtn" class="w-full bg-brandYellow hover:bg-yellow-400 text-darkTheme font-bold py-3.5 rounded-xl text-xs transition shadow-md mt-2 flex items-center justify-center">
+                    Login
+                </button>
+            </form>
+
+            <div class="mt-6 pt-5 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
+                <span>New commuter?</span>
+                <button onclick="openRegisterModal()" class="font-bold text-brandYellow hover:underline">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: REAL REGISTRATION MODAL             -->
+    <!-- ========================================== -->
+    <div id="registerModal" class="fixed inset-0 z-50 hidden bg-darkTheme/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-darkTheme border border-gray-800 rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-8 text-white relative max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+            <!-- Close Button -->
+            <button onclick="closeRegisterModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-brandYellow/10 border border-brandYellow/30 rounded-2xl flex items-center justify-center text-brandYellow text-xl">
+                    <i class="fa-solid fa-user-plus"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-black text-white">Join SAATH<span class="text-brandYellow">CHALO</span></h3>
+                    <p class="text-xs text-gray-400">Real Multi-User Commute Platform</p>
+                </div>
+            </div>
+
+            <!-- Error message container -->
+            <div id="regErrorBox" class="hidden bg-red-900/40 border border-red-500/50 text-red-200 p-3 rounded-xl text-xs mb-4"></div>
+
+            <form onsubmit="handleRegisterSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Name / Display Name</label>
+                    <input type="text" id="regName" required placeholder="Aditya" class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:ring-2 focus:ring-brandYellow outline-none transition">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Email Address</label>
+                    <input type="email" id="regEmail" required placeholder="aditya@example.com" class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:ring-2 focus:ring-brandYellow outline-none transition">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Password</label>
+                        <input type="password" id="regPassword" required placeholder="At least 6 characters" class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:ring-2 focus:ring-brandYellow outline-none transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Confirm Password</label>
+                        <input type="password" id="regConfirmPassword" required placeholder="Confirm password" class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-xs text-white placeholder-gray-500 focus:ring-2 focus:ring-brandYellow outline-none transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Preferred / Primary Area</label>
+                    <select id="regArea" class="w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-3 text-xs text-white focus:ring-2 focus:ring-brandYellow outline-none transition">
+                        <option value="Knowledge Park">Knowledge Park</option>
+                        <option value="Greater Noida">Greater Noida</option>
+                        <option value="Ghaziabad">Ghaziabad</option>
+                        <option value="Noida">Noida</option>
+                        <option value="Pari Chowk">Pari Chowk</option>
+                        <option value="Alpha">Alpha</option>
+                        <option value="Beta">Beta</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <!-- Avatar Selection -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-2">Profile Avatar</label>
+                    <input type="hidden" id="regSelectedAvatar" value="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80">
+                    <div id="regAvatarPicker" class="flex items-center gap-3 overflow-x-auto pb-2">
+                        <!-- Populated by renderRegisterAvatarOptions() -->
+                    </div>
+                </div>
+
+                <!-- Privacy Guarantee Note -->
+                <div class="bg-gray-800/80 border border-gray-700 rounded-2xl p-3.5 text-xs text-gray-300 space-y-1">
+                    <p class="font-bold text-brandYellow flex items-center gap-1.5">
+                        <i class="fa-solid fa-shield-halved"></i> Profile Privacy Guarantee
+                    </p>
+                    <p class="text-[11px] text-gray-400 leading-relaxed">
+                        Other community users ONLY see your <strong>display name</strong> and <strong>avatar</strong>. Your email, phone, and password are never exposed.
+                    </p>
+                </div>
+
+                <button type="submit" id="regSubmitBtn" class="w-full bg-brandYellow hover:bg-yellow-400 text-darkTheme font-bold py-3.5 rounded-xl text-xs transition shadow-md mt-2 flex items-center justify-center">
+                    Create Account
+                </button>
+            </form>
+
+            <div class="mt-6 pt-5 border-t border-gray-800 text-center text-xs text-gray-400">
+                Already registered? 
+                <button onclick="openLoginModal()" class="font-bold text-brandYellow hover:underline ml-1">Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: USER PROFILE & SETTINGS MODAL       -->
+    <!-- ========================================== -->
+    <div id="profileModal" class="fixed inset-0 z-50 hidden bg-darkTheme/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-8 border border-gray-200 text-darkTheme">
+            <div class="flex justify-between items-center pb-4 border-b border-gray-100 mb-6">
+                <div>
+                    <h3 class="text-xl font-bold text-darkTheme">Commuter Profile</h3>
+                    <p class="text-xs text-gray-500">Manage your identity and commuter standing.</p>
+                </div>
+                <button onclick="closeProfileModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <div class="space-y-5 mb-6">
+                <!-- Name Field -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">Your Display Name</label>
+                    <input type="text" id="profileNameInput" class="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-sm font-semibold text-darkTheme focus:ring-2 focus:ring-brandYellow outline-none transition" value="Aditya">
+                </div>
+
+                <!-- Avatar Selection -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Choose Commuter Avatar</label>
+                    <div id="avatarPickerOptions" class="flex items-center gap-3 overflow-x-auto pb-2">
+                        <!-- Populated by renderAvatarPickerOptions() -->
+                    </div>
+                </div>
+
+                <!-- Community Privacy Guarantee -->
+                <div class="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-xs text-blue-900 space-y-1">
+                    <p class="font-bold flex items-center gap-1.5"><i class="fa-solid fa-lock text-blue-600"></i> Community Identity Privacy</p>
+                    <p class="text-[11px] text-blue-800 leading-relaxed">
+                        Inside Community (Chat, Map, and Votes), ONLY your display name and avatar are visible. Your phone number, email, and personal contact details are never shared.
+                    </p>
+                </div>
+
+                <!-- Fine Standing Display -->
+                <div id="profileFineDisplay">
+                    <!-- Populated by renderUserProfileUI() -->
+                </div>
+            </div>
+
+            <div class="flex gap-3">
+                <button onclick="saveUserProfile()" class="w-full bg-brandYellow hover:bg-yellow-400 text-darkTheme font-bold py-3.5 rounded-xl text-sm transition shadow-md">
+                    Save Profile Settings
+                </button>
+            </div>
+    <!-- ========================================== -->
+    <!-- MODAL: BROWSE & JOIN ANY COMMUNITY GROUP   -->
+    <!-- ========================================== -->
+    <div id="communitiesModal" class="fixed inset-0 z-50 hidden bg-darkTheme/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-darkTheme border border-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl p-6 sm:p-8 text-white relative max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+            <button onclick="closeCommunitiesModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-brandYellow/10 border border-brandYellow/30 rounded-2xl flex items-center justify-center text-brandYellow text-xl">
+                    <i class="fa-solid fa-users-rectangle"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-black text-white">Regional <span class="text-brandYellow">Communities</span></h3>
+                    <p class="text-xs text-gray-400">Join and participate in any local commuter hubs across Greater Noida & NCR</p>
+                </div>
+            </div>
+
+            <!-- List of all communities -->
+            <div id="communitiesModalList" class="space-y-3 mb-6">
+                <!-- Populated dynamically by renderCommunitiesModal() -->
+            </div>
+
+            <div class="bg-gray-800/80 border border-gray-700 rounded-2xl p-3.5 text-xs text-gray-400 flex items-center gap-2.5">
+                <i class="fa-solid fa-circle-info text-brandYellow text-sm flex-shrink-0"></i>
+                <span>You can join any community of your choice to coordinate commutes, chat, and vote for shared rides.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script src="script.js"></script>
 </body>
 </html>

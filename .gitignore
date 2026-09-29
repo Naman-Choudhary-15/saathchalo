@@ -1,0 +1,20 @@
+# Binaries & large executables
+cloudflared.exe
+*.exe
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS metadata
+.DS_Store
+Thumbs.db
