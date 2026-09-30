@@ -64,17 +64,43 @@ class SaathLiveService {
         return true; // Always ready with zero external configuration needed
     }
 
-    // Safe API client defending against HTML / 502 Bad Gateway responses
-    async safeFetchJson(url, options = {}) {
+    getApiBase() {
+        if (typeof window === 'undefined') return '';
+        if (window.SAATH_CONFIG && window.SAATH_CONFIG.API_BASE_URL) {
+            return window.SAATH_CONFIG.API_BASE_URL.replace(/\/$/, '');
+        }
+        const origin = window.location.origin || '';
+        const host = window.location.host || '';
+        // If opened on GitHub Pages, file://, or non-backend dev port (5500, 3000), route to live tunnel
+        if (origin.startsWith('file:') || origin === 'null' || host.includes('github.io') || host.includes(':5500') || host.includes(':3000')) {
+            return 'https://montreal-displayed-casio-europe.trycloudflare.com';
+        }
+        return origin;
+    }
+
+    // Safe API client defending against HTML / 502 Bad Gateway responses with auto-retry
+    async safeFetchJson(url, options = {}, retries = 2) {
         options.headers = options.headers || {};
         options.headers['Bypass-Tunnel-Reminder'] = 'true';
         options.headers['Accept'] = 'application/json';
 
+        let targetUrl = url;
+        if (targetUrl.startsWith('/')) {
+            const base = this.getApiBase();
+            if (base && !targetUrl.startsWith(base)) {
+                targetUrl = base + targetUrl;
+            }
+        }
+
         let res;
         try {
-            res = await fetch(url, options);
+            res = await fetch(targetUrl, options);
         } catch (netErr) {
-            console.warn('Network issue fetching ' + url, netErr);
+            console.warn('Network issue fetching ' + targetUrl, netErr);
+            if (retries > 0) {
+                await new Promise(r => setTimeout(r, 1000));
+                return this.safeFetchJson(url, options, retries - 1);
+            }
             throw new Error('Connection re-establishing. Please check internet connection.');
         }
 
@@ -85,17 +111,17 @@ class SaathLiveService {
             try {
                 data = JSON.parse(text);
             } catch (e) {
-                // Diagnostic logging for non-JSON responses
-                console.error({
-                    url,
-                    status: res.status,
-                    contentType: res.headers.get('content-type'),
-                    bodyPreview: text.slice(0, 300)
-                });
-                if (text.includes('Bad Gateway') || res.status === 502 || res.status === 504 || res.status === 408) {
-                    throw new Error('Tunnel reconnecting. Please tap again in a moment.');
+                // If Cloudflare or network proxy returned an HTML error, auto-retry
+                if (retries > 0 && (res.status >= 500 || text.includes('Cloudflare') || text.includes('<!DOCTYPE') || text.includes('Bad Gateway') || text.includes('Origin DNS'))) {
+                    console.log(`[SAATH SYNC] Connection warming up (${res.status}), retrying in 1s...`);
+                    await new Promise(r => setTimeout(r, 1000));
+                    return this.safeFetchJson(url, options, retries - 1);
                 }
-                throw new Error('Server returned unexpected response. Please try again.');
+
+                if (text.includes('Bad Gateway') || res.status === 502 || res.status === 504 || res.status === 530) {
+                    throw new Error('Connection to live server temporarily reconnecting. Please wait 5 seconds and tap Log In again.');
+                }
+                throw new Error('Server connection was interrupted. Please try again.');
             }
         }
 
@@ -556,17 +582,27 @@ class SaathLiveService {
 
     async getLivePresence(communityId = 'knowledge-park') {
         try {
-            return await this.safeFetchJson(`/api/presence?communityId=${communityId}`);
+            const stats = await this.safeFetchJson(`/api/presence?communityId=${communityId}`);
+            if (stats && (stats.totalRegisteredUsers || stats.registeredCount || stats.connectedCount)) {
+                this.cachedPresence = stats;
+            }
+            return stats;
         } catch (e) {
+            if (this.cachedPresence) return this.cachedPresence;
             return { connectedCount: 0, activeRidersCount: 0, ridesOrganizingCount: 0, connectedUsers: [] };
         }
     }
 
     async getCommunityMembers(communityId = 'knowledge-park') {
         try {
-            return await this.safeFetchJson(`/api/community/${communityId}/members`);
+            const stats = await this.safeFetchJson(`/api/community/${communityId}/members`);
+            if (stats && (stats.totalRegisteredUsers || stats.registeredCount || (Array.isArray(stats.members) && stats.members.length > 0))) {
+                this.cachedMembers = stats;
+            }
+            return stats;
         } catch (e) {
             console.warn('Error fetching community members:', e);
+            if (this.cachedMembers) return this.cachedMembers;
             return null;
         }
     }

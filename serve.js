@@ -743,6 +743,41 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ----------------------------------------------------
+    // API: Forgot / Reset Password (Section 6)
+    // ----------------------------------------------------
+    if ((pathname === '/api/auth/reset-password' || pathname === '/api/auth/forgot-password') && req.method === 'POST') {
+        try {
+            const body = await parseJsonBody(req);
+            const { email, newPassword } = body;
+            if (!email) {
+                return sendJson(res, 400, { error: 'Email address is required.' });
+            }
+            const database = loadDb();
+            const user = database.users.find(u => u.email && u.email.toLowerCase() === email.trim().toLowerCase());
+            if (!user) {
+                return sendJson(res, 404, { error: 'No account registered with this email address.' });
+            }
+            if (newPassword) {
+                user.passwordHash = crypto.createHash('sha256').update(newPassword).digest('hex');
+                user.token = 'tok_' + crypto.randomBytes(24).toString('hex');
+                saveDb();
+                return sendJson(res, 200, {
+                    success: true,
+                    message: 'Password reset successfully! You can now log in with your new password.',
+                    token: user.token
+                });
+            } else {
+                return sendJson(res, 200, {
+                    success: true,
+                    message: 'Account verified. Please provide a new password to complete the reset.'
+                });
+            }
+        } catch (e) {
+            return sendJson(res, 500, { error: 'Password reset failed: ' + e.message });
+        }
+    }
+
+    // ----------------------------------------------------
     // API: Current User Profile
     // ----------------------------------------------------
     if (pathname === '/api/auth/me' && req.method === 'GET') {

@@ -367,6 +367,33 @@ async function handleLogout() {
     await appManager.loadInitialData();
 }
 
+async function handleForgotPasswordClick() {
+    const emailInput = document.getElementById('loginEmail');
+    const defaultEmail = emailInput ? emailInput.value.trim() : '';
+    const email = prompt("Enter your registered email address to reset your password:", defaultEmail);
+    if (!email || !email.trim()) return;
+
+    const newPassword = prompt("Enter your new password (minimum 6 characters):");
+    if (!newPassword || newPassword.length < 6) {
+        alert("Password must be at least 6 characters long.");
+        return;
+    }
+
+    try {
+        const res = await window.saathSupabase.safeFetchJson('/api/auth/reset-password', {
+            method: 'POST',
+            body: JSON.stringify({ email: email.trim(), newPassword })
+        });
+        alert(res.message || "Password updated successfully! You can now log in.");
+        if (emailInput) emailInput.value = email.trim();
+        const pwInput = document.getElementById('loginPassword');
+        if (pwInput) pwInput.value = newPassword;
+    } catch (e) {
+        alert(e.message || "Could not reset password. Please verify your email.");
+    }
+}
+window.handleForgotPasswordClick = handleForgotPasswordClick;
+
 function showAuthError(box, message) {
     if (!box) {
         alert(message);
