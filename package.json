@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node serve.js",
     "dev": "node serve.js",
-    "test": "node test_core.js"
+    "test": "node scripts/test_master_finalization.js",
+    "backup": "node scripts/backup.js",
+    "migrate": "node scripts/migrate_unique_users.js",
+    "android:sync": "npx cap sync android",
+    "android:open": "npx cap open android"
   },
   "keywords": [
     "saathchalo",

@@ -45,8 +45,28 @@
 
     <!-- Supabase JS Client & App Service -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="/env.js"></script>
-    <script src="supabase-client.js"></script>
+    <script src="/env.js?v=2.4.0"></script>
+    <script src="supabase-client.js?v=2.4.0"></script>
+    <script src="pricing.config.js?v=2.4.0"></script>
+    <script>
+        // Google Maps JavaScript API dynamic loader
+        window.initGoogleMapsServices = function() {
+            console.log('[GoogleMaps] API Loaded successfully.');
+            if (typeof window.setupGoogleTrafficMap === 'function') {
+                window.setupGoogleTrafficMap();
+            }
+        };
+        window.addEventListener('DOMContentLoaded', () => {
+            const key = window.__ENV__?.VITE_GOOGLE_MAPS_API_KEY;
+            if (key && key.trim() !== '' && !window.google?.maps) {
+                const s = document.createElement('script');
+                s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&libraries=places,routes&callback=initGoogleMapsServices`;
+                s.async = true;
+                s.defer = true;
+                document.head.appendChild(s);
+            }
+        });
+    </script>
 </head>
 <body class="bg-gray-50 text-gray-800 antialiased selection:bg-brandYellow selection:text-darkTheme">
 
@@ -61,12 +81,11 @@
                 </a>
 
                 <!-- Desktop Navigation Links -->
-                <div class="hidden lg:flex items-center space-x-8">
-                    <a href="#problem" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">The Problem</a>
+                <div class="hidden lg:flex items-center space-x-7">
                     <a href="#booking" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Book a Ride</a>
-                    <a href="#how-it-works" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">How it Works</a>
                     <a href="#shuttle" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Shuttle Schedule</a>
                     <a href="#community" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Community</a>
+                    <a href="#live-community" class="text-gray-300 hover:text-brandYellow font-medium transition-colors flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>Live Community</a>
                     <a href="#live-map" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Live Map</a>
                     <a href="#my-rides" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">My Rides</a>
                 </div>
@@ -116,11 +135,10 @@
 
         <!-- Mobile Menu Dropdown -->
         <div id="mobileMenu" class="hidden lg:hidden bg-darkTheme border-b border-gray-800 px-4 pt-2 pb-4 space-y-2">
-            <a href="#problem" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">The Problem</a>
             <a href="#booking" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Book a Ride</a>
-            <a href="#how-it-works" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">How it Works</a>
             <a href="#shuttle" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Shuttle Schedule</a>
             <a href="#community" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Community</a>
+            <a href="#live-community" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>Live Community</a>
             <a href="#live-map" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Live Map</a>
             <a href="#my-rides" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">My Rides</a>
             <div class="pt-2 flex gap-2">
@@ -137,7 +155,7 @@
                 <!-- Text Content -->
                 <div class="max-w-3xl">
                     <div class="inline-block border-b-2 border-brandYellow mb-6">
-                        <p class="text-brandYellow font-semibold tracking-widest uppercase text-sm mb-1">Design Thinking Project</p>
+                        <p class="text-brandYellow font-semibold tracking-widest uppercase text-sm mb-1">SMARTER • SAFER • SHARED COMMUTES</p>
                     </div>
                     <h1 class="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-6">
                         What if <span class="text-brandYellow">Empty Seats</span> <br>
@@ -151,17 +169,17 @@
                         <a href="#booking" class="bg-brandYellow text-darkTheme text-center px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-400 transition-colors shadow-lg hover:shadow-yellow-500/30">
                             Book a Ride Now
                         </a>
-                        <a href="#problem" class="border-2 border-gray-400 text-white text-center px-8 py-4 rounded-full font-bold text-lg hover:border-brandYellow hover:text-brandYellow transition-colors">
-                            Understand the Problem
+                        <a href="#live-map" class="border-2 border-brandYellow text-brandYellow text-center px-8 py-4 rounded-full font-bold text-lg hover:bg-brandYellow hover:text-darkTheme transition-colors">
+                            Explore Live Mobility Map
                         </a>
                     </div>
                 </div>
                 
-                <!-- Hero Image Graphic (Restored Original) -->
+                <!-- Hero Image Graphic (Restored Original with Authentic Knowledge Park II Metro Station) -->
                 <div class="hidden lg:block relative z-10">
                     <div class="absolute inset-0 bg-brandYellow rounded-full blur-[120px] opacity-20"></div>
-                    <div class="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-800 transform rotate-3 hover:rotate-0 transition-transform duration-500">
-                        <img src="https://images.unsplash.com/photo-1587474260584-136574528ed5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Indian Auto Rickshaw Commute" class="w-full h-[500px] object-cover opacity-90 hover:opacity-100 transition-opacity">
+                    <div class="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-800 transform rotate-3 hover:rotate-0 transition-transform duration-500 bg-gray-900">
+                        <img src="knowledge-park-metro.png" alt="Knowledge Park II Metro Station, Greater Noida" class="w-full h-[500px] object-cover object-top opacity-95 hover:opacity-100 transition-opacity">
                         <!-- Floating UI Badge -->
                         <div class="absolute bottom-8 left-8 bg-white/95 backdrop-blur rounded-2xl p-4 shadow-2xl flex items-center gap-4 animate-bounce" style="animation-duration: 3s;">
                             <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-xl">
@@ -169,65 +187,11 @@
                             </div>
                             <div>
                                 <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">Ride Matched</p>
-                                <p class="text-lg font-extrabold text-darkTheme">₹35.00 <span class="text-sm font-normal text-gray-400 line-through">₹80.00</span></p>
+                                <p class="text-lg font-extrabold text-darkTheme">₹24.00 <span class="text-xs text-emerald-600 font-bold ml-1">Traveller • EV</span></p>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- The Problem Section (Restored Original) -->
-    <section id="problem" class="py-24 bg-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-sm font-bold text-gray-500 tracking-widest uppercase mb-2 border-b-2 border-brandYellow inline-block pb-1">The Real Problem</h2>
-                <h3 class="text-4xl font-extrabold text-darkTheme mb-4">Same commute. <span class="text-brandYellow">Rising friction.</span></h3>
-                <p class="text-xl text-gray-600 italic">"From college gate to home — a long, uncertain and costly journey."</p>
-            </div>
-
-            <!-- The Journey -->
-            <div class="relative max-w-5xl mx-auto mb-12">
-                <div class="absolute inset-0 flex items-center justify-center z-0 hidden md:flex">
-                    <div class="w-full h-1 bg-gray-200"></div>
-                </div>
-                <div class="grid grid-cols-2 md:grid-cols-5 gap-8 relative z-10">
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-20 h-20 bg-white border-4 border-gray-200 rounded-full flex items-center justify-center text-2xl text-darkTheme mb-4 shadow-sm">
-                            <i class="fa-solid fa-school"></i>
-                        </div>
-                        <h4 class="font-bold">1. College Ends</h4>
-                        <p class="text-sm text-gray-500">Classes over, rush outside</p>
-                    </div>
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-20 h-20 bg-white border-4 border-yellow-300 rounded-full flex items-center justify-center text-2xl text-darkTheme mb-4 shadow-sm">
-                            <i class="fa-solid fa-mobile-screen"></i>
-                        </div>
-                        <h4 class="font-bold">2. Search</h4>
-                        <p class="text-sm text-gray-500">Opens apps / looks around</p>
-                    </div>
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-20 h-20 bg-white border-4 border-gray-200 rounded-full flex items-center justify-center text-2xl text-darkTheme mb-4 shadow-sm">
-                            <i class="fa-solid fa-hourglass-half"></i>
-                        </div>
-                        <h4 class="font-bold">3. Wait</h4>
-                        <p class="text-sm text-gray-500">10-20 min average wait</p>
-                    </div>
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-20 h-20 bg-white border-4 border-red-400 rounded-full flex items-center justify-center text-2xl text-red-500 mb-4 shadow-sm">
-                            <i class="fa-solid fa-indian-rupee-sign"></i>
-                        </div>
-                        <h4 class="font-bold">4. Check Price & Negotiate</h4>
-                        <p class="text-sm text-gray-500">Surge pricing & bargaining</p>
-                    </div>
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-20 h-20 bg-white border-4 border-brandYellow rounded-full flex items-center justify-center text-2xl text-darkTheme mb-4 shadow-sm">
-                            <i class="fa-solid fa-house"></i>
-                        </div>
-                        <h4 class="font-bold">5. Travel</h4>
-                        <p class="text-sm text-gray-500">Reaches home, exhausted</p>
-                    </div>
+                    <p class="text-[11px] text-gray-400 mt-2 text-right">Knowledge Park II Metro Station (Aqua Line), Greater Noida</p>
                 </div>
             </div>
         </div>
@@ -283,93 +247,6 @@
                     <h4 class="text-2xl font-bold mb-3 text-darkTheme">Live Pooling</h4>
                     <p class="text-gray-600 flex-grow mb-6">Hop into an auto already en route to your destination. Fill empty seats & ride super cheap!</p>
                     <button onclick="openBookingModal('Live Pooling', '₹20.00', 'fa-bolt', 'text-purple-600', true)" class="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 rounded-xl hover:from-purple-700 hover:to-pink-600 transition shadow-md shadow-purple-500/30">Find Active Autos</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- How it Works Section (Restored Original) -->
-    <section id="how-it-works" class="py-24 bg-darkTheme text-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16">
-                <h2 class="text-sm font-bold text-gray-400 tracking-widest uppercase mb-2 border-b-2 border-brandYellow inline-block pb-1">User Flow</h2>
-                <h3 class="text-4xl md:text-5xl font-extrabold mb-4">How it <span class="text-brandYellow">works?</span></h3>
-            </div>
-
-            <div class="flex flex-col md:flex-row items-center gap-16">
-                <!-- App Mockup -->
-                <div class="w-full md:w-1/2 flex justify-center">
-                    <div class="relative w-[300px] h-[600px] bg-gray-900 border-8 border-gray-800 rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col">
-                        <!-- Top Bar -->
-                        <div class="h-6 w-full flex justify-between px-6 pt-2 items-center text-[10px] text-white">
-                            <span>18:45</span>
-                            <div class="flex gap-1"><i class="fa-solid fa-signal"></i><i class="fa-solid fa-wifi"></i><i class="fa-solid fa-battery-full"></i></div>
-                        </div>
-                        <!-- Map Area -->
-                        <div class="flex-1 bg-gray-800 relative bg-[url('https://www.transparenttextures.com/patterns/cartographer.png')]">
-                            <!-- Route Line -->
-                            <svg class="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M 50 150 Q 150 250 250 400" stroke="#eab308" stroke-width="4" fill="transparent" stroke-dasharray="6,6" />
-                            </svg>
-                            <!-- Markers -->
-                            <div class="absolute top-[130px] left-[35px] text-brandYellow text-2xl"><i class="fa-solid fa-location-dot"></i></div>
-                            <div class="absolute top-[240px] left-[140px] text-brandYellow text-2xl"><i class="fa-solid fa-location-dot"></i></div>
-                            <div class="absolute top-[380px] left-[235px] text-white text-2xl"><i class="fa-solid fa-flag-checkered"></i></div>
-                        </div>
-                        <!-- Bottom Sheet -->
-                        <div class="bg-gray-900 rounded-t-3xl p-6 absolute bottom-0 w-full border-t border-gray-700">
-                            <h4 class="text-center font-bold text-sm mb-4">YOUR SHARED RIDE <span class="text-gray-400 font-normal">(3 Passengers)</span></h4>
-                            <div class="flex justify-between mb-4 px-2">
-                                <div class="text-center"><div class="w-10 h-10 bg-blue-500 rounded-full mx-auto mb-1 flex items-center justify-center text-xs">You</div></div>
-                                <div class="text-center"><div class="w-10 h-10 bg-green-500 rounded-full mx-auto mb-1 flex items-center justify-center text-xs">S</div></div>
-                                <div class="text-center"><div class="w-10 h-10 bg-purple-500 rounded-full mx-auto mb-1 flex items-center justify-center text-xs">B</div></div>
-                            </div>
-                            <div class="flex justify-between items-center mb-6">
-                                <span class="text-xs text-gray-400">Total Est.</span>
-                                <span class="font-bold text-xl text-brandYellow">₹35.00 <span class="text-xs text-gray-400 font-normal">Your split</span></span>
-                            </div>
-                            <button onclick="openBookingModal('Auto Service', '₹24.67', 'fa-taxi', 'text-brandYellow')" class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition">CONFIRM SHARE</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Steps -->
-                <div class="w-full md:w-1/2 space-y-8">
-                    <div class="flex items-start">
-                        <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">1</div>
-                        <div>
-                            <h4 class="text-xl font-bold mb-1">Input Location</h4>
-                            <p class="text-gray-400">Students enter pickup & drop locations in the app.</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start">
-                        <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">2</div>
-                        <div>
-                            <h4 class="text-xl font-bold mb-1">Smart Match</h4>
-                            <p class="text-gray-400">App instantly matches nearby riders on the same trajectory.</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start">
-                        <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">3</div>
-                        <div>
-                            <h4 class="text-xl font-bold mb-1">Route Gen</h4>
-                            <p class="text-gray-400">System finds the most efficient, detour-free route for the shared ride.</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start">
-                        <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">4</div>
-                        <div>
-                            <h4 class="text-xl font-bold mb-1">Pickup</h4>
-                            <p class="text-gray-400">Vehicle collects passengers sequentially in the shortest path.</p>
-                        </div>
-                    </div>
-                    <div class="flex items-start">
-                        <div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full flex items-center justify-center font-bold text-lg mr-6 flex-shrink-0">5</div>
-                        <div>
-                            <h4 class="text-xl font-bold mb-1">Shared Pay</h4>
-                            <p class="text-gray-400">Each student pays only their fraction of the total fare automatically.</p>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -461,9 +338,12 @@
                             <div id="communityActionContainer" class="flex items-center">
                                 <!-- Populated dynamically by renderCommunityJoinUI() -->
                             </div>
-                            <span id="communityPresenceBadge" class="text-[11px] font-bold text-green-400 bg-green-500/10 px-2.5 py-1 rounded-full border border-green-500/20 flex items-center gap-1.5 whitespace-nowrap">
-                                <span class="w-2 h-2 rounded-full bg-green-400 animate-ping"></span> 18 Active
-                            </span>
+                            <a href="#live-community" id="communityRegisteredCountBadge" class="text-[11px] font-bold text-brandYellow bg-brandYellow/10 px-2.5 py-1 rounded-full border border-brandYellow/20 hover:bg-brandYellow/20 transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer" title="View Registered Members">
+                                <i class="fa-solid fa-users"></i> <span id="communityRegisteredText">-- Registered</span>
+                            </a>
+                            <a href="#live-community" id="communityPresenceBadge" class="text-[11px] font-bold text-green-400 bg-green-500/10 px-2.5 py-1 rounded-full border border-green-500/20 hover:bg-green-500/20 transition flex items-center gap-1.5 whitespace-nowrap cursor-pointer" title="View Active Users">
+                                <span class="w-2 h-2 rounded-full bg-green-400 animate-ping"></span> <span id="communityPresenceText">18 Active</span>
+                            </a>
                         </div>
                     </div>
 
@@ -516,81 +396,390 @@
         </div>
     </section>
 
-    <!-- Commuter Avatar Map & Live Pooling -->
-    <section id="live-map" class="py-20 bg-white border-t border-gray-200">
+    <!-- ========================================== -->
+    <!-- SECTION: LIVE COMMUNITY & REGISTERED MEMBERS -->
+    <!-- ========================================== -->
+    <section id="live-community" class="py-20 bg-darkTheme text-white border-t border-gray-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Header Block -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
                 <div>
-                    <h2 class="text-3xl sm:text-4xl font-black text-darkTheme">Live <span class="text-brandYellow">Commuter Map</span></h2>
-                    <p class="text-sm text-gray-600 mt-1">See active verified commuters heading in your direction with live community pooling.</p>
+                    <div class="flex flex-wrap items-center gap-2 mb-2">
+                        <span class="inline-flex items-center gap-1.5 text-xs font-black text-brandYellow tracking-widest uppercase border-b-2 border-brandYellow pb-0.5">
+                            <i class="fa-solid fa-users"></i> LIVE COMMUNITY
+                        </span>
+                        <span id="statActiveNowHeaderBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> <span id="statActiveNowHeader">-- Active Now</span>
+                        </span>
+                        <span id="statTotalRegisteredHeaderBadge" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-brandYellow/10 text-brandYellow border border-brandYellow/20">
+                            <i class="fa-solid fa-id-card-clip"></i> <span id="statTotalRegisteredHeader">-- Registered Members</span>
+                        </span>
+                    </div>
+                    <h2 class="text-3xl sm:text-4xl font-black">Registered <span class="text-brandYellow">Members</span></h2>
+                    <p class="text-sm text-gray-400 mt-1">Real authenticated commuters across Greater Noida & NCR network. Active status updates in real time.</p>
                 </div>
                 <div class="flex items-center gap-3">
-                    <button onclick="openBookingModal('Live Pooling', '₹20.00', 'fa-bolt', 'text-purple-600', true)" class="bg-darkTheme text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-brandYellow hover:text-darkTheme transition">
-                        Hop In En Route
+                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Live Presence Synced
+                    </span>
+                </div>
+            </div>
+
+            <!-- 4 Customer-Facing Live Stat Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                <!-- Stat 1: Total Registered Members -->
+                <div class="bg-gray-900/90 rounded-2xl p-6 border border-brandYellow/30 shadow-lg relative overflow-hidden group hover:border-brandYellow transition">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Registered</span>
+                        <div class="w-9 h-9 bg-brandYellow/10 text-brandYellow rounded-xl flex items-center justify-center text-base">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <h3 id="statTotalRegisteredCount" class="text-4xl font-black text-white">--</h3>
+                        <span class="text-xs text-brandYellow font-bold">members</span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-2">Verified registered commuter accounts</p>
+                </div>
+
+                <!-- Stat 2: Active Now -->
+                <div class="bg-gray-900/90 rounded-2xl p-6 border border-emerald-500/30 shadow-lg relative overflow-hidden group hover:border-emerald-500 transition">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Active Now</span>
+                        <div class="w-9 h-9 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center text-base">
+                            <i class="fa-solid fa-signal"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <h3 id="statConnectedCount" class="text-4xl font-black text-emerald-400">--</h3>
+                        <span class="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span> online
+                        </span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-2">Realtime presence connected</p>
+                </div>
+
+                <!-- Stat 3: Offline Members -->
+                <div class="bg-gray-900/90 rounded-2xl p-6 border border-gray-800 shadow-lg relative overflow-hidden group hover:border-gray-700 transition">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Offline Members</span>
+                        <div class="w-9 h-9 bg-gray-800 text-gray-400 rounded-xl flex items-center justify-center text-base">
+                            <i class="fa-solid fa-user-clock"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <h3 id="statOfflineCount" class="text-4xl font-black text-gray-300">--</h3>
+                        <span class="text-xs text-gray-400 font-bold">offline</span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-2">Real registered users currently away</p>
+                </div>
+
+                <!-- Stat 4: Active Rides / In Transit -->
+                <div class="bg-gray-900/90 rounded-2xl p-6 border border-gray-800 shadow-lg relative overflow-hidden group hover:border-gray-700 transition">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Active in Pool</span>
+                        <div class="w-9 h-9 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center text-base">
+                            <i class="fa-solid fa-route"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-baseline gap-2">
+                        <h3 id="statActiveRiders" class="text-4xl font-black text-white">0</h3>
+                        <span class="text-xs text-blue-400 font-bold">in transit</span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-2">Commuters in confirmed shared rides</p>
+                </div>
+            </div>
+
+            <!-- Filter Tabs & Real-Time Member Search Bar -->
+            <div class="bg-gray-900/80 border border-gray-800 rounded-2xl p-4 mb-8 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="memberFilterTabAll" onclick="setMemberFilter('ALL')" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-brandYellow text-darkTheme shadow-sm">
+                        All Members (<span id="memberFilterCountAll">--</span>)
+                    </button>
+                    <button id="memberFilterTabActive" onclick="setMemberFilter('ACTIVE')" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-gray-800 text-gray-300 hover:text-white border border-gray-700 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        ● Active Now (<span id="memberFilterCountActive">--</span>)
+                    </button>
+                    <button id="memberFilterTabOffline" onclick="setMemberFilter('OFFLINE')" class="px-4 py-2 rounded-xl text-xs font-bold transition bg-gray-800 text-gray-300 hover:text-white border border-gray-700 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full border border-gray-400"></span>
+                        ○ Offline (<span id="memberFilterCountOffline">--</span>)
+                    </button>
+                </div>
+
+                <div class="relative flex-1 max-w-md">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+                    <input type="text" id="memberSearchInput" oninput="handleMemberSearchInput(this.value)" placeholder="Search members by name or hub area..." class="w-full bg-gray-800 border border-gray-700 rounded-xl pl-9 pr-4 py-2.5 text-xs text-white placeholder-gray-500 focus:ring-2 focus:ring-brandYellow outline-none transition">
+                </div>
+            </div>
+
+            <!-- Member Directory Containers -->
+            <div class="space-y-8">
+                <!-- ACTIVE NOW SECTION -->
+                <div id="activeNowSection" class="transition-all">
+                    <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-800">
+                        <h4 class="text-xs font-black uppercase tracking-wider text-emerald-400 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            ACTIVE NOW
+                            <span id="activeNowSectionCountBadge" class="text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">-- Online</span>
+                        </h4>
+                        <span class="text-xs text-gray-400">Realtime presence synced</span>
+                    </div>
+                    <div id="liveConnectedUsersList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Populated dynamically by renderFilteredCommunityMembers() -->
+                    </div>
+                </div>
+
+                <!-- OFFLINE SECTION -->
+                <div id="offlineSection" class="transition-all">
+                    <div class="flex items-center justify-between mb-4 pb-2 border-b border-gray-800">
+                        <h4 class="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full border border-gray-400"></span>
+                            OFFLINE
+                            <span id="offlineSectionCountBadge" class="text-[10px] font-bold bg-gray-800 text-gray-300 border border-gray-700 px-2 py-0.5 rounded-full">-- Registered</span>
+                        </h4>
+                        <span class="text-xs text-gray-400">Real registered users not currently active</span>
+                    </div>
+                    <div id="offlineMembersList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Populated dynamically by renderFilteredCommunityMembers() -->
+                    </div>
+                    <div id="offlineLoadMoreContainer" class="mt-6 text-center hidden">
+                        <button onclick="toggleShowAllOfflineMembers()" id="toggleOfflineBtn" class="bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700 font-bold px-6 py-2.5 rounded-xl text-xs transition">
+                            Show All Registered Offline Members
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Privacy Footnote -->
+                <div class="pt-4 border-t border-gray-800 text-center">
+                    <p class="text-xs text-gray-500">
+                        <i class="fa-solid fa-shield-halved text-emerald-400 mr-1"></i>
+                        Strict Privacy Guarantee: Only display name, avatar, and community hub are shown. Contact information, emails, and phone numbers are strictly protected.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SECTION: LIVE SOCIAL MOBILITY MAP          -->
+    <!-- ========================================== -->
+    <section id="live-map" class="py-20 bg-gray-900 text-white border-t border-gray-800 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+                <div>
+                    <span class="inline-flex items-center gap-2 text-xs font-black text-brandYellow tracking-widest uppercase mb-1 border-b-2 border-brandYellow pb-0.5">
+                        <i class="fa-solid fa-map-location-dot"></i> Social Mobility Network
+                    </span>
+                    <h2 class="text-3xl sm:text-4xl font-black text-white">Live <span class="text-brandYellow">Social Mobility Map</span></h2>
+                    <p class="text-sm text-gray-400 mt-1">Real-time peers travelling your way, live pooled vehicles, and Google traffic-aware routes.</p>
+                </div>
+
+                <!-- Top Quick Status Controls -->
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <!-- Location Sharing Privacy Status Pill -->
+                    <button id="mapSharingPrivacyToggleBtn" onclick="toggleUserLocationSharing()" class="bg-gray-800 hover:bg-gray-700 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition border border-gray-700 flex items-center gap-2 shadow-sm">
+                        <span id="mapSharingPrivacyDot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span id="mapSharingPrivacyLabel">Visibility: Sharing (Community)</span>
+                    </button>
+
+                    <!-- GPS Status Pill -->
+                    <div id="mapGpsStatusBadge" class="bg-gray-800 text-gray-300 text-xs font-semibold px-3 py-2 rounded-xl border border-gray-700 flex items-center gap-1.5 cursor-pointer" onclick="requestDeviceLocation()" title="Click to refresh high-accuracy GPS">
+                        <i class="fa-solid fa-satellite text-emerald-400"></i>
+                        <span id="mapGpsStatusText">GPS: Locating...</span>
+                    </div>
+
+                    <!-- Calibrate Exact Pin Button -->
+                    <button id="pinExactLocationBtn" onclick="toggleExactPinMode()" class="bg-gray-800 hover:bg-gray-700 text-brandYellow text-xs font-bold px-3.5 py-2 rounded-xl transition border border-gray-700 flex items-center gap-1.5 shadow-sm" title="Pinpoint exact doorstep or gate location">
+                        <i class="fa-solid fa-thumbtack text-amber-400"></i>
+                        <span>Exact Pin</span>
+                    </button>
+
+                    <button onclick="openBookingModal('Live Pooling', '₹20.00', 'fa-bolt', 'text-purple-600', true)" class="bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow flex items-center gap-1.5">
+                        <i class="fa-solid fa-bolt"></i> Hop In En Route
                     </button>
                 </div>
             </div>
 
-            <!-- Map Frame with Customer-Friendly Sidebar -->
+            <!-- Map Layout: Main Interactive Map (8 cols) + Companion Sidebar (4 cols) -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                <!-- Interactive Leaflet Map (8 cols) -->
-                <div class="lg:col-span-8 bg-gray-100 rounded-3xl overflow-hidden shadow-xl border border-gray-200 h-[480px] relative">
-                    <div id="communityMapContainer" class="w-full h-full"></div>
-                    <!-- Live Legend Overlay -->
-                    <div class="absolute bottom-4 left-4 z-[500] bg-darkTheme/90 backdrop-blur text-white text-[11px] p-3 rounded-2xl border border-gray-700 space-y-1.5 shadow-lg">
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full bg-brandYellow border border-white"></span>
-                            <span>Student Commuter (Tap to view)</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                            <span>High-Density Commuter Pool</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-5 h-0.5 bg-brandYellow border-t border-dashed border-darkTheme"></div>
-                            <span>Shared Commute Route</span>
+                
+                <!-- Main Interactive Map Frame -->
+                <div class="lg:col-span-8 bg-gray-950 rounded-3xl overflow-hidden shadow-2xl border border-gray-800 h-[560px] sm:h-[620px] relative flex flex-col">
+                    
+                    <!-- Map Canvas Container -->
+                    <div id="communityMapContainer" class="w-full h-full flex-1 relative min-h-[520px] sm:min-h-[580px] z-0"></div>
+
+                    <!-- FLOATING TOP CENTER: PINPOINT MODE HINT BANNER -->
+                    <div id="mapPinHintBanner" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-brandYellow text-darkTheme text-xs font-black px-4 py-2.5 rounded-2xl border-2 border-darkTheme shadow-2xl flex items-center gap-2 pointer-events-auto animate-bounce">
+                        <i class="fa-solid fa-crosshairs text-sm"></i>
+                        <span>Tap anywhere on the map or drag the yellow pin to set exact doorstep pickup!</span>
+                        <button onclick="toggleExactPinMode(false)" class="ml-2 bg-darkTheme text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] hover:bg-gray-800">✕</button>
+                    </div>
+
+                    <!-- FLOATING TOP LEFT: "PEOPLE AROUND YOU" BADGE -->
+                    <div id="floatingPeopleBadge" class="absolute top-4 left-4 z-[500] bg-darkTheme/95 backdrop-blur-md text-white text-xs font-bold px-3.5 py-2.5 rounded-2xl border border-gray-700 shadow-2xl flex items-center gap-2.5 pointer-events-auto">
+                        <span class="w-2.5 h-2.5 rounded-full bg-brandYellow animate-ping"></span>
+                        <div>
+                            <span id="floatingPeopleText">People around you: Loading...</span>
+                            <span id="floatingMatchingSubtext" class="block text-[10px] text-gray-400 font-normal mt-0.5">Select a destination to find riders going your way</span>
                         </div>
                     </div>
+
+                    <!-- FLOATING TOP RIGHT: MAP LAYER & RECENTER CONTROLS -->
+                    <div class="absolute top-4 right-4 z-[500] flex flex-col gap-2 pointer-events-auto">
+                        <!-- Recenter Button -->
+                        <button id="mapRecenterBtn" onclick="recenterMapOnUser()" title="Locate Me" class="w-10 h-10 bg-darkTheme/95 backdrop-blur hover:bg-brandYellow hover:text-darkTheme text-white border border-gray-700 rounded-2xl flex items-center justify-center text-sm shadow-xl transition active:scale-95 group">
+                            <i class="fa-solid fa-crosshairs text-brandYellow group-hover:text-darkTheme"></i>
+                        </button>
+
+                        <!-- Pinpoint Exact Location Button on Map -->
+                        <button id="mapPinModeBtn" onclick="toggleExactPinMode()" title="Pin Exact Location (Doorstep / Gate)" class="w-10 h-10 bg-darkTheme/95 backdrop-blur hover:bg-brandYellow hover:text-darkTheme text-brandYellow border border-gray-700 rounded-2xl flex items-center justify-center text-sm shadow-xl transition active:scale-95 group">
+                            <i class="fa-solid fa-thumbtack text-brandYellow group-hover:text-darkTheme"></i>
+                        </button>
+
+                        <!-- Toggle Traffic Layer Button -->
+                        <button id="toggleTrafficLayerBtn" onclick="toggleMapTrafficLayer()" title="Toggle Traffic Conditions" class="w-10 h-10 bg-darkTheme/95 backdrop-blur hover:bg-gray-800 text-white border border-gray-700 rounded-2xl flex items-center justify-center text-sm shadow-xl transition active:scale-95">
+                            <i id="trafficLayerIcon" class="fa-solid fa-traffic-light text-emerald-400"></i>
+                        </button>
+
+                        <!-- Toggle People Layer Button -->
+                        <button id="togglePeopleLayerBtn" onclick="toggleMapPeople()" title="Toggle Community Commuters" class="w-10 h-10 bg-darkTheme/95 backdrop-blur hover:bg-gray-800 text-white border border-gray-700 rounded-2xl flex items-center justify-center text-sm shadow-xl transition active:scale-95">
+                            <i id="peopleLayerIcon" class="fa-solid fa-users text-brandYellow"></i>
+                        </button>
+                        <button id="toggleCorridorLayerBtn" style="display:none;" aria-hidden="true"></button>
+
+                        <!-- Toggle Vehicles Layer Button -->
+                        <button id="toggleVehiclesLayerBtn" onclick="toggleMapVehicles()" title="Toggle Live Vehicles" class="w-10 h-10 bg-darkTheme/95 backdrop-blur hover:bg-gray-800 text-white border border-gray-700 rounded-2xl flex items-center justify-center text-sm shadow-xl transition active:scale-95">
+                            <i id="vehiclesLayerIcon" class="fa-solid fa-taxi text-white"></i>
+                        </button>
+                    </div>
+
+                    <!-- FLOATING BOTTOM LEFT: TRAFFIC & MAP LEGEND -->
+                    <div class="absolute bottom-4 left-4 z-[500] bg-darkTheme/95 backdrop-blur text-white text-[11px] p-3 rounded-2xl border border-gray-700 space-y-1.5 shadow-xl max-w-xs pointer-events-auto">
+                        <div class="font-bold text-gray-300 border-b border-gray-700 pb-1 mb-1 flex items-center justify-between">
+                            <span>Live Mobility Map Legend</span>
+                            <span id="mapTrafficBadge" class="text-[10px] text-emerald-400 font-normal">Active Traffic</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-brandYellow border-2 border-white"></span>
+                            <span>You (Current GPS Location)</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-emerald-400"></span>
+                            <span>Opted-In Commuter Avatar</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs">🛺 🚐 🚌</span>
+                            <span>Assigned Live Vehicles</span>
+                        </div>
+                        <div class="pt-1 border-t border-gray-700 text-[10px] text-gray-300 flex items-center justify-between gap-1">
+                            <span>Traffic:</span>
+                            <span class="text-blue-400 font-bold">● Normal</span>
+                            <span class="text-yellow-400 font-bold">● Slow</span>
+                            <span class="text-red-500 font-bold">● Traffic Jam</span>
+                        </div>
+                    </div>
+
+                    <!-- SOCIAL MOBILITY BOTTOM SHEET (SLIDES UP ON TAPPING USER, VEHICLE, OR CLUSTER) -->
+                    <div id="mapBottomSheet" class="hidden absolute bottom-0 left-0 right-0 z-[600] bg-darkTheme/98 backdrop-blur-lg border-t-2 border-brandYellow rounded-t-3xl p-5 shadow-2xl transition-all duration-300 ease-in-out text-white pointer-events-auto max-h-[75%] overflow-y-auto">
+                        <div class="flex justify-between items-start mb-3">
+                            <div class="w-10 h-1 bg-gray-700 rounded-full mx-auto absolute top-2 left-1/2 -translate-x-1/2"></div>
+                            <div id="bottomSheetHeader" class="flex-1 pr-6">
+                                <!-- Populated dynamically by showMapBottomSheet() -->
+                            </div>
+                            <button onclick="closeMapBottomSheet()" class="text-gray-400 hover:text-white transition p-1">
+                                <i class="fa-solid fa-xmark text-lg"></i>
+                            </button>
+                        </div>
+                        <div id="bottomSheetBody">
+                            <!-- Populated dynamically by showMapBottomSheet() -->
+                        </div>
+                    </div>
+
                 </div>
 
-                <!-- Customer Community Cards (4 cols) -->
+                <!-- Companion Sidebar (4 cols) -->
                 <div class="lg:col-span-4 space-y-5">
-                    <!-- Live Route Sharing Card -->
-                    <div class="bg-gray-50 p-6 rounded-3xl border border-gray-200 shadow-sm">
-                        <h3 class="font-extrabold text-base text-darkTheme mb-1 flex items-center gap-2">
-                            <i class="fa-solid fa-users text-brandYellow"></i> Active Route Pooling
+                    
+                    <!-- Card 1: Find Commuters Travelling Your Way -->
+                    <div class="bg-gray-900 p-6 rounded-3xl border border-gray-800 shadow-lg text-white">
+                        <h3 class="font-extrabold text-base text-white mb-1 flex items-center gap-2">
+                            <i class="fa-solid fa-compass text-brandYellow"></i> Travelling Your Way
                         </h3>
-                        <p class="text-xs text-gray-500 mb-4">Connect with verified student commuters heading along the same corridor.</p>
+                        <p class="text-xs text-gray-400 mb-4">Select your destination corridor to find peers heading along the same trajectory.</p>
 
-                        <div class="space-y-3 text-xs">
-                            <div class="flex justify-between items-center p-2.5 bg-white rounded-xl border border-gray-100">
-                                <span class="text-gray-600">Active Campus Corridor</span>
-                                <span class="font-bold text-darkTheme">Knowledge Park → Pari Chowk</span>
-                            </div>
-                            <div class="flex justify-between items-center p-2.5 bg-white rounded-xl border border-gray-100">
-                                <span class="text-gray-600">Average Pickup Proximity</span>
-                                <span class="font-bold text-green-600">Within Campus Gate</span>
-                            </div>
-                            <div class="flex justify-between items-center p-2.5 bg-white rounded-xl border border-gray-100">
-                                <span class="text-gray-600">Evening Commute Window</span>
-                                <span class="font-bold text-darkTheme">6:00 PM – 7:30 PM</span>
+                        <!-- Destination Corridor Picker -->
+                        <div class="space-y-3 mb-4">
+                            <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-wider">Choose Destination Corridor</label>
+                            <select id="mapDestinationSelect" onchange="handleMapDestinationChange(this.value)" class="w-full bg-gray-800 border border-gray-700 rounded-xl p-3 text-xs font-semibold text-white focus:ring-2 focus:ring-brandYellow outline-none transition">
+                                <option value="">-- Select or Tap Map Corridor --</option>
+                                <option value="Pari Chowk">Pari Chowk, Greater Noida</option>
+                                <option value="Alpha 1">Alpha 1 & 2 Commercial Hub</option>
+                                <option value="Sector 62, Noida">Sector 62 IT Corridor, Noida</option>
+                                <option value="Ghaziabad Central Bus Terminal">Ghaziabad Terminal Junction</option>
+                            </select>
+                        </div>
+
+                        <!-- Dynamic Travelling Your Way Results Box -->
+                        <div id="travellingYourWayBox" class="p-3.5 bg-gray-800/80 rounded-2xl border border-gray-700 text-xs">
+                            <div class="flex items-center gap-2 text-gray-400">
+                                <i class="fa-solid fa-street-view text-brandYellow text-sm"></i>
+                                <span>No destination selected. Select above to match compatible riders.</span>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Commute Priority Card -->
-                    <div class="bg-darkTheme text-white p-6 rounded-3xl shadow-lg border border-gray-800">
+                    <!-- Card 2: Location Privacy & Sharing Controls -->
+                    <div class="bg-gray-900 p-6 rounded-3xl border border-gray-800 shadow-lg text-white">
                         <div class="flex justify-between items-center mb-3">
-                            <h3 class="font-extrabold text-sm text-brandYellow">Smart Allocation Priority</h3>
-                            <span class="text-[10px] bg-green-500/20 text-green-400 font-bold px-2 py-0.5 rounded">Active</span>
+                            <h3 class="font-extrabold text-sm text-brandYellow flex items-center gap-2">
+                                <i class="fa-solid fa-shield-halved"></i> Location Privacy Controls
+                            </h3>
+                            <span id="privacyStatusPill" class="text-[10px] bg-emerald-500/10 text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                                Active Sharing
+                            </span>
                         </div>
-                        <p class="text-xs text-gray-300 mb-3">Your ride is automatically prioritized based on confirmed reservations and community participation.</p>
-                        <div class="bg-gray-800 p-3 rounded-xl text-xs space-y-1 font-mono text-gray-300">
-                            <div>✓ Confirmed Ride Pass Holders</div>
-                            <div>✓ Community Group Participants</div>
-                            <div>✓ Regular Scheduled Commuters</div>
+                        <p class="text-xs text-gray-400 mb-4 leading-relaxed">
+                            Privacy-first by design: Only your <strong>display name</strong> and <strong>avatar</strong> are visible to peers on the map. Your phone number and email are <strong>never</strong> shared.
+                        </p>
+                        
+                        <div class="space-y-3 pt-2 border-t border-gray-800 text-xs">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <span class="font-bold text-white block">Share Location on Map</span>
+                                    <span class="text-[10px] text-gray-400">Peers in your community can coordinate pooling</span>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="locationSharingCheckbox" onchange="handleLocationPrivacyCheckbox(this.checked)" checked class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brandYellow"></div>
+                                </label>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Card 3: Real-Time Assigned Mobility Telemetry -->
+                    <div class="bg-darkTheme text-white p-6 rounded-3xl shadow-xl border border-gray-800">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] font-extrabold text-brandYellow uppercase tracking-wider">LIVE TELEMETRY</span>
+                            <span class="text-[10px] bg-blue-500/20 text-blue-400 font-bold px-2 py-0.5 rounded">Synced</span>
+                        </div>
+                        <h4 class="font-black text-sm text-white mb-2">Campus Mobility Hub Status</h4>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between items-center p-2.5 bg-gray-800/80 rounded-xl">
+                                <span class="text-gray-400">Active Auto (UP16-AT-1411)</span>
+                                <span class="font-bold text-brandYellow">2 / 4 seats • 4 min</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2.5 bg-gray-800/80 rounded-xl">
+                                <span class="text-gray-400">Traveller Van (UP16-SH-2088)</span>
+                                <span class="font-bold text-white">12 / 20 seats • 7 min</span>
+                            </div>
+                            <div class="flex justify-between items-center p-2.5 bg-gray-800/80 rounded-xl">
+                                <span class="text-gray-400">Express Bus (UP16-BS-5002)</span>
+                                <span class="font-bold text-white">28 / 50 seats • 12 min</span>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -621,13 +810,18 @@
 
     <!-- Footer -->
     <footer class="bg-darkTheme text-gray-400 py-12 border-t border-gray-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="flex items-center gap-2.5">
                 <i class="fa-solid fa-route text-brandYellow text-2xl"></i>
                 <span class="font-bold text-xl text-white">SAATH<span class="text-brandYellow">CHALO</span></span>
             </div>
+            <div class="flex flex-wrap items-center justify-center gap-4 text-xs">
+                <button onclick="openPrivacyModal()" class="hover:text-brandYellow transition text-gray-400">Privacy Policy</button>
+                <span class="text-gray-600">•</span>
+                <button onclick="openTermsModal()" class="hover:text-brandYellow transition text-gray-400">Community Guidelines & Terms</button>
+            </div>
             <p class="text-xs text-gray-400 text-center md:text-right">
-                Design Thinking Project Prototype. Developed for every student commuter.
+                Ek Raah, Kai Manzilein • Smarter, Safer, Shared Commutes
             </p>
         </div>
     </footer>
@@ -673,11 +867,25 @@
                     </div>
 
                     <!-- Location Shortcuts -->
-                    <div class="flex flex-wrap gap-1.5 mb-4">
+                    <div class="flex flex-wrap gap-1.5 mb-3">
                         <button onclick="document.getElementById('dropoffInput').value='Pari Chowk, Greater Noida'; calculateRoute();" class="text-[10px] font-bold bg-gray-200 hover:bg-brandYellow text-darkTheme px-2.5 py-1 rounded-lg transition">Pari Chowk</button>
                         <button onclick="document.getElementById('dropoffInput').value='Alpha 1, Greater Noida'; calculateRoute();" class="text-[10px] font-bold bg-gray-200 hover:bg-brandYellow text-darkTheme px-2.5 py-1 rounded-lg transition">Alpha 1</button>
                         <button onclick="document.getElementById('dropoffInput').value='Sector 62, Noida'; calculateRoute();" class="text-[10px] font-bold bg-gray-200 hover:bg-brandYellow text-darkTheme px-2.5 py-1 rounded-lg transition">Noida Sec 62</button>
                         <button onclick="document.getElementById('dropoffInput').value='Ghaziabad Central Bus Terminal'; calculateRoute();" class="text-[10px] font-bold bg-gray-200 hover:bg-brandYellow text-darkTheme px-2.5 py-1 rounded-lg transition">Ghaziabad</button>
+                    </div>
+
+                    <!-- Fuel / Energy Preference (Section 26, 42) -->
+                    <div class="mb-3">
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 flex items-center justify-between">
+                            <span>Vehicle / Fuel Preference</span>
+                            <span class="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">EV Tier: Lowest Fare</span>
+                        </label>
+                        <select id="bookingFuelPreference" onchange="calculateRoute()" class="w-full p-2 bg-white border border-gray-200 rounded-xl text-xs font-semibold text-darkTheme focus:ring-2 focus:ring-brandYellow outline-none transition">
+                            <option value="EV">Electric Vehicle (EV) — Clean & Lowest Fare</option>
+                            <option value="CNG">CNG — Medium Fare Tier</option>
+                            <option value="PETROL">Petrol — Standard Tier</option>
+                            <option value="NO_PREFERENCE">No Preference (Fastest Match)</option>
+                        </select>
                     </div>
 
                     <button id="calculateRouteBtn" onclick="calculateRoute()" class="w-full bg-gray-200 text-darkTheme font-bold py-2.5 rounded-xl hover:bg-gray-300 transition mb-4 text-xs">
@@ -690,7 +898,7 @@
                     </div>
                     
                     <div class="mt-auto pt-4 border-t border-gray-200">
-                        <button id="confirmRideBtn" class="w-full bg-brandYellow text-darkTheme font-bold py-4 rounded-2xl hover:bg-yellow-400 transition shadow-lg text-sm">
+                        <button id="confirmRideBtn" onclick="confirmBookingAction()" class="w-full bg-brandYellow text-darkTheme font-bold py-4 rounded-2xl hover:bg-yellow-400 transition shadow-lg text-sm">
                             Confirm Ride
                         </button>
                     </div>
@@ -928,11 +1136,24 @@
                 </div>
             </div>
 
-            <div class="flex gap-3">
+            <div class="flex gap-3 mb-4">
                 <button onclick="saveUserProfile()" class="w-full bg-brandYellow hover:bg-yellow-400 text-darkTheme font-bold py-3.5 rounded-xl text-sm transition shadow-md">
                     Save Profile Settings
                 </button>
             </div>
+
+            <!-- Danger Zone: Account Deletion (Section 83) -->
+            <div class="pt-4 border-t border-red-100 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-red-600">Delete Account</p>
+                    <p class="text-[11px] text-gray-500">Permanently erase profile & all community data</p>
+                </div>
+                <button type="button" onclick="confirmDeleteAccount()" class="px-3.5 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-trash-can text-[11px]"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
     <!-- ========================================== -->
     <!-- MODAL: BROWSE & JOIN ANY COMMUNITY GROUP   -->
     <!-- ========================================== -->
@@ -964,7 +1185,101 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- MODAL: PRIVACY POLICY MODAL                -->
+    <!-- ========================================== -->
+    <div id="privacyModal" class="fixed inset-0 z-50 hidden bg-darkTheme/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-darkTheme border border-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl p-6 sm:p-8 text-white relative max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+            <button onclick="closePrivacyModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-brandYellow/10 border border-brandYellow/30 rounded-2xl flex items-center justify-center text-brandYellow text-xl">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-black text-white">SAATHCHALO Privacy Policy</h3>
+                    <p class="text-xs text-gray-400">Zero data exploitation • Full commuter privacy guarantee</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 text-xs text-gray-300 leading-relaxed">
+                <div>
+                    <h4 class="font-bold text-white text-sm mb-1">1. Commuter Identity & Community Visibility</h4>
+                    <p>When you participate in SAATHCHALO regional communities, only your <strong>display name</strong> and selected <strong>avatar</strong> are visible to fellow commuters in chat, destination voting, and shared rides. Your email address, phone number, and password hashes are strictly protected and never exposed.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white text-sm mb-1">2. Location Privacy & Live Social Mobility Map</h4>
+                    <p>Live GPS location sharing on the Social Mobility Map is strictly <strong>opt-in</strong>. When enabled, your approximate position is broadcast to active community peers to facilitate trajectory pooling. You can toggle Location Visibility OFF at any moment in the Live Map controls to become completely invisible on the map while retaining community access.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white text-sm mb-1">3. Pricing Privacy</h4>
+                    <p>SAATHCHALO calculates equitable fare distribution using proportional distance ratios. Customers see only the verified, vehicle-specific estimated fare for their commute. Internal rates, markup models, and allocation thresholds are kept confidential to ensure fair, transparent consumer pricing.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white text-sm mb-1">4. Permanent Account Deletion</h4>
+                    <p>Under Google Play and GDPR standards, you retain complete ownership of your data. You may delete your account, session tokens, and all associated profile records at any time directly inside <strong>Profile → Delete Account</strong>.</p>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-5 border-t border-gray-800 text-right">
+                <button onclick="closePrivacyModal()" class="bg-brandYellow text-darkTheme font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-yellow-400 transition">
+                    I Understand
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: COMMUNITY GUIDELINES & TERMS MODAL  -->
+    <!-- ========================================== -->
+    <div id="termsModal" class="fixed inset-0 z-50 hidden bg-darkTheme/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-darkTheme border border-gray-800 rounded-3xl shadow-2xl w-full max-w-2xl p-6 sm:p-8 text-white relative max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
+            <button onclick="closeTermsModal()" class="absolute top-5 right-5 text-gray-400 hover:text-white transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-12 h-12 bg-brandYellow/10 border border-brandYellow/30 rounded-2xl flex items-center justify-center text-brandYellow text-xl">
+                    <i class="fa-solid fa-handshake-angle"></i>
+                </div>
+                <div>
+                    <h3 class="text-xl font-black text-white">Community Guidelines & Terms</h3>
+                    <p class="text-xs text-gray-400">Rules for safe, respectful, and reliable shared transit</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 text-xs text-gray-300 leading-relaxed">
+                <div>
+                    <h4 class="font-bold text-white text-sm mb-1">1. Respectful Communication</h4>
+                    <p>Community chat is intended for route coordination, finding travel companions, and sharing transit updates. Harassment, hate speech, spam, and unsolicited commercial activity will lead to immediate account suspension.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white text-sm mb-1">2. ₹50 No-Show Policy on Confirmed Votes</h4>
+                    <p>Community destination voting coordinates shared vehicles for groups of riders. If you vote, confirm participation in an arranged shared ride, and subsequently fail to show up without timely cancellation, a <strong>₹50 cancellation fine</strong> applies to protect vehicle drivers and fellow commuters from empty reserved seats.</p>
+                </div>
+                <div>
+                    <h4 class="font-bold text-white text-sm mb-1">3. Content Moderation & Reporting</h4>
+                    <p>Any message or behavior violating community safety can be reported instantly using the flag icon next to messages. Reports are immediately logged for administrative and safety review.</p>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-5 border-t border-gray-800 text-right">
+                <button onclick="closeTermsModal()" class="bg-brandYellow text-darkTheme font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-yellow-400 transition">
+                    Accept & Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FLOATING ZERO-DOWNTIME CONNECTION STATUS NOTIFIER (RECOVERY PILL) -->
+    <div id="saathConnectionStatusPill" class="hidden fixed bottom-6 right-6 z-[9999] px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xl transition-all duration-300 flex items-center gap-2 pointer-events-auto border backdrop-blur-md bg-darkTheme/95 text-brandYellow border-brandYellow/60">
+        <span id="saathConnectionDot" class="w-2.5 h-2.5 rounded-full bg-brandYellow animate-ping"></span>
+        <span id="saathConnectionText">Reconnecting to live sync...</span>
+    </div>
+
     <!-- Scripts -->
-    <script src="script.js"></script>
+    <script src="script.js?v=2.4.0"></script>
 </body>
 </html>

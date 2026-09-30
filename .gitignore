@@ -18,3 +18,9 @@ yarn-error.log*
 # OS metadata
 .DS_Store
 Thumbs.db
+
+# Production Databases & Persistent Data (NEVER TRACK IN GIT)
+saath-db.json
+*.db.json
+data/
+backup/

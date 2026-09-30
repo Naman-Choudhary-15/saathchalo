@@ -4,138 +4,103 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-brightgreen.svg)](https://nodejs.org/)
-[![Status](https://img.shields.io/badge/Status-Live%20Multi--User-blue.svg)](https://github.com/Naman-Choudhary-15/saathchalo)
+[![Build: RC](https://img.shields.io/badge/Release%20Candidate-v2.4.0--rc-success.svg)](https://github.com/Naman-Choudhary-15/saathchalo)
+[![Tests: 15/15 Passed](https://img.shields.io/badge/Tests-15%2F15%20Passing-brightgreen.svg)](./scripts/test_master_finalization.js)
 
-**SAATHCHALO** is an intelligent, route-based shared transportation web platform designed for university students and daily commuters. It bridges the gap between stranded commuters and underutilized vehicles across high-frequency student hubs in Delhi-NCR (Greater Noida, Noida, Ghaziabad).
-
-This version is a **Real Multi-User Live Platform** featuring zero-configuration real-time communication: commuters across different phones, tablets, and laptops can register, log in, join regional community groups of their choice, chat in real time, cast destination votes, pool into shared rides with automated vehicle allocation, and reserve shuttle seats with instant multi-device synchronization.
+**SAATHCHALO** is a production-grade, real-time shared mobility and transit platform engineered for university students and daily commuters. It pools commuters traveling along compatible corridors into single shared vehicles (Auto, Traveller, Bus), allocates vehicles dynamically based on real rider count and fuel tier preferences (EV, CNG, Petrol), calculates mathematically fair fares based on individual journey distance ratios, and provides live traffic-aware routing.
 
 ---
 
-## 🌟 Key Features & Capabilities
+## 🌟 Key Capabilities & Product Features
 
-### 1. 💬 Instant Real-Time Community Group Chat
-- **0ms Optimistic UI Delivery:** Messages appear immediately on the sender's screen with zero latency or loading delay.
-- **Cross-Device Synchronization:** Powered by Server-Sent Events (SSE) with 10s keepalive heartbeats and background sync fallback.
-- **Mobile Keyboard Compatibility:** Native support for virtual keyboard `Enter` and touch submission across Android Chrome and iOS Safari.
-- **Clean Slate (Zero Demo Chats):** Pure commuter-driven conversations with a welcoming empty-state card for newly activated hubs.
-- **Strict Privacy Guarantee:** Only the commuter's **Display Name** and **Avatar** are visible to peers in community feeds; private emails and phone numbers remain strictly confidential.
+### 1. 🧮 Fair Distance-Ratio Fare Engine
+- **Formula:** $F \times \frac{d_i}{D} = \text{fare}_i$ where $F$ is the total vehicle fare, $d_i$ is passenger $i$'s journey distance, and $D = \sum d_k$ is the sum of all passenger distances.
+- **Strict Conservation:** $\sum \text{fare}_i = F$ guaranteed through deterministic 2-decimal currency rounding reconciliation.
+- **Pricing Privacy:** Commuters see only their individual calculated fare (e.g. `₹30`); internal formulas, distance ratios, and cost markups remain strictly server-side.
+- **Commercial Fuel Hierarchy:** Configured centralized pricing in [`pricing.config.js`](./pricing.config.js) enforces `EV ≤ CNG ≤ Petrol`.
 
-### 2. 👥 Choice to Join Any Community Group
-Commuters have complete freedom to join, leave, and switch between regional transit communities:
-- **Supported Regional Communities:**
-  1. 🎓 **Knowledge Park** (Greater Noida) — College campuses, hostels & student housing
-  2. 🔄 **Pari Chowk** (Greater Noida) — Major transit interchange & Aqua Line metro terminal
-  3. 🏢 **Alpha 1 & 2** (Greater Noida) — Residential sectors & commercial markets
-  4. 🏙️ **Noida Sector 62** (Noida) — IT corridor, institutions & Blue Line metro
-  5. 🚆 **Ghaziabad Terminal** (Ghaziabad) — Railway junction & intercity connector
-- **Interactive Header Controls:** Dynamic `[+ Join Group]` / `Member ✓` button in the community chat header. Hovering over a joined badge gives the option to leave the group.
-- **Visual Status Badges:** Area tabs display a `✓ Joined` badge for every community the commuter is enrolled in.
-- **"Explore All Groups" Modal:** A comprehensive directory modal allowing commuters to view member counts, transit descriptions, and join or switch to any regional hub with a single tap.
-- **Multi-Group Membership:** Commuters traveling between campus and home can join multiple communities simultaneously.
+### 2. 🚐 Corridor Pooling & Vehicle Allocation
+- **Dynamic Vehicle Tiers:**
+  - 1 – 4 Riders → **Auto** (Capacity: 4)
+  - 5 – 20 Riders → **Traveller / Shuttle** (Capacity: 20)
+  - 21 – 50 Riders → **Transit Bus** (Capacity: 50)
+- **One Shared Ride = One Shared Vehicle:** All pooled commuters share the exact same `ride_id`, `vehicle_id`, and vehicle type label (e.g. `Traveller • EV`).
+- **Fuel Preference Support:** Commuters can request EV, CNG, Petrol, or No Preference during booking.
 
-### 3. 🗳️ Real-Time Community Destination Voting
-- Backed by persistent sessions and active daily polls across all 5 communities.
-- **One Vote per Account:** Guaranteed enforcement prevents ballot manipulation.
-- **Pre-Vote Policy Modal:** Displays the chosen destination and communicates the ₹50 cancellation/no-show policy before recording the vote.
-- **Synchronous Telemetry:** Vote counts, bar percentages, and active voter statistics update across all screens in real time.
+### 3. 🗺️ Social Mobility Map & Live Traffic Routing
+- **Device Geolocation:** Detects commuter's real-time device location (`YOU` pin) with graceful permission fallbacks.
+- **Opt-In Location Privacy:** Strict separation between active online status and map visibility; commuters can toggle visibility anytime.
+- **Google Maps Traffic-Aware Routing:** Multi-colored route polylines reflecting real-time traffic conditions:
+  - 🟦 **Blue:** Normal / Low Traffic
+  - 🟨 **Yellow:** Slow / Moderate Traffic
+  - 🟥 **Red:** Traffic Jam / Congestion
+- **Traffic-Aware ETA:** Dynamic ETAs based on real live road conditions.
 
-### 4. 🚐 Automated Vehicle Allocation & Pooling
-- When commuters agree on a shared destination, the system pools them into a single ride.
-- **Dynamic Capacity & Allocation:**
-  - 1 – 4 Riders → **Shared Auto** (e.g. `UP16-AT-1411`)
-  - 5 – 6 Riders → **Shared Cab**
-  - 7 – 20 Riders → **Mini Shuttle Van**
-- Confirmed rides broadcast immediately to all participants with driver information, vehicle license plate, and live Leaflet route tracking.
+### 4. 👥 Strict Canonical User Accounting ($R = A + O$)
+- **One Person = One Permanent Account:** User identity rooted in canonical `usr_<hex>`.
+- **Zero Synthetic Counts:** Complete removal of fake offsets (`+14`, `+16`) and demo counters.
+- **Mathematical Identity:** Registered Members = Active Now + Offline Members ($R = A + O$) enforced at the database level.
+- **Multi-Session Deduplication:** Multiple open tabs or devices for the same user count as exactly 1 person.
 
-### 5. 📅 Live Campus Shuttle Availability
-- Fixed-route campus shuttles with real-time seat decrementing.
-- Prevents overbooking at the server level.
-- Live status tags (`Available`, `Filling Fast`, `Full`) update across all devices without page reloads.
+### 5. 🗳️ Real-Time Community Hubs & Destination Polls
+- **5 High-Frequency Regional Hubs:** Knowledge Park, Pari Chowk, Alpha 1 & 2, Noida Sector 62, Ghaziabad Terminal.
+- **Real-Time Group Chat:** Instant multi-device messaging with user-generated content (UGC) reporting & moderation.
+- **One Person = One Vote:** Server-enforced idempotent voting with pre-vote ₹50 cancellation policy notice and persistent personal vote state ("✓ You voted").
 
-### 6. 🔐 Real Authentication & Persistent Profiles
-- Email and password registration with encrypted credentials.
-- Persistent sessions stored securely across browser reloads.
-- Dedicated profile modal to manage display name, avatar, and view commuter standing.
+### 6. 🛡️ User Privacy & Account Management
+- **In-App Account Deletion:** Permanent account deletion (`DELETE /api/auth/account`) satisfying Google Play Store requirements.
+- **Privacy Policy & Community Guidelines:** In-app modals detailing data protection, encryption, and geolocation usage.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer | Technology |
+| Layer | Implementation |
 |---|---|
-| **Frontend Structure & Styling** | Semantic HTML5, Vanilla JavaScript (ES6+), Vanilla CSS & Tailwind CSS |
-| **Typography & Icons** | Google Fonts (*Inter*), Font Awesome 6 Pro |
-| **Interactive Maps** | Leaflet.js, OpenStreetMap Nominatim Geocoding |
-| **Realtime Engine** | Server-Sent Events (SSE) with QUIC stream keepalives & smart sync |
-| **Integrated Backend** | Zero-dependency Node.js HTTP server (`serve.js`) |
-| **Persistence** | Embedded persistent database engine (`saath-db.json`) |
-| **Cloud Database (Optional)** | Supabase (PostgreSQL with RLS, Supabase Auth, Storage) via `supabase-schema.sql` |
+| **Frontend** | Semantic HTML5, Vanilla JavaScript (ES6+), Vanilla CSS (SAATHCHALO Dark Navy / Gold Identity) |
+| **Typography & Assets** | Google Fonts (*Outfit*, *Plus Jakarta Sans*), Font Awesome 6 Pro, Authentic Wikimedia Commons Photography |
+| **Mapping Engine** | Leaflet.js, Google Maps Platform (Maps JS API, Routes API, TrafficLayer) |
+| **Realtime Engine** | Server-Sent Events (SSE) with QUIC keepalives & smart reconnect |
+| **Backend Service** | Node.js Zero-Dependency HTTP Server (`serve.js`) |
+| **Persistence** | Embedded Atomic Persistent Database Engine (`saath-db.json`) |
+| **Cloud Database** | Supabase (PostgreSQL with RLS, Auth, Realtime) via `supabase-schema.sql` |
+| **Mobile Packaging** | Capacitor (`@capacitor/core`, `@capacitor/android`, `capacitor.config.json`) |
 
 ---
 
-## 🚀 Quickstart Guide
+## 🚀 Getting Started
 
-### 1. Clone the Repository
+### 1. Install & Run Locally
 ```bash
 git clone https://github.com/Naman-Choudhary-15/saathchalo.git
 cd saathchalo
-```
-
-### 2. Start the Live Platform
-No external database or API key setup is required to run the full application:
-```bash
 npm start
 ```
-*(Or run `node serve.js` directly)*.
+Open [http://localhost:8085](http://localhost:8085) in your browser.
 
-The application starts immediately on:
-- **Local Machine:** `http://localhost:8085`
-- **Local Network (Phones & Tablets on same Wi-Fi):** `http://<YOUR_LOCAL_IP>:8085`
-
----
-
-## 🌐 Public Access & Multi-Device Testing
-
-To share the application publicly with other users across cellular data (4G/5G) and home Wi-Fi:
-
-### Using Cloudflare Tunnel:
+### 2. Run Verification Test Suite
 ```bash
-cloudflared tunnel --url http://127.0.0.1:8085
+npm test
 ```
-This generates a secure public URL (e.g. `https://your-tunnel.trycloudflare.com`) accessible from any smartphone or computer worldwide.
-
-### Multi-Device Verification Scenario:
-1. **Device A (Laptop):** Open the URL, click **Register**, create account `Aditya`, select `Knowledge Park`.
-2. **Device B (Phone):** Open the URL, click **Register**, create account `Anshika`, select `Knowledge Park`.
-3. **Instant Chat:** Send a message from Device A. Watch it appear instantly on Device B.
-4. **Community Choice:** On Device B, click `Pari Chowk`, then click **`[+ Join Group]`**. The button updates to **`Member ✓`** and the tab shows **`✓ Joined`**.
-5. **Destination Vote:** Both vote on an active departure option. See the vote count and progress bars synchronize in real time.
-6. **Ride Pooling:** Finalize the poll to see the shared auto/cab allocated with driver details and route tracking!
+Executes the 15-point automated acceptance suite covering:
+- Distance ratio fare calculations (10/6/4, 10/5, equal distances, rounding).
+- Vehicle allocation thresholds and fuel tiers.
+- System health check & data preservation.
+- Strict $R = A + O$ member identity.
+- One person = one vote idempotency.
+- Shared corridor pooling and booking engine.
+- Account deletion lifecycle.
+- UGC content reporting.
 
 ---
 
-## 📁 Repository Structure
+## 📚 Deployment Documentation
 
-```
-saathchalo/
-├── index.html              # Main customer-facing web application
-├── script.js               # Application logic, optimistic chat, community membership & map
-├── supabase-client.js      # Unified real-time client service (SSE & API integration)
-├── serve.js                # Embedded HTTP server, REST endpoints & SSE broadcast engine
-├── saath-db.json           # Seed database schema (users, communities, vote sessions, shuttles)
-├── supabase-schema.sql     # Complete PostgreSQL schema & RLS policies for cloud Supabase
-├── SUPABASE_SETUP.md       # Step-by-step setup guide for optional Supabase hosting
-├── test_core.js            # Automated unit tests for route matching and fare algorithms
-├── package.json            # Project manifest and start scripts
-└── README.md               # Product documentation & usage guide
-```
+- 📱 [**Google Play Store Deployment Guide**](./PLAYSTORE_DEPLOYMENT.md): Step-by-step instructions for Android packaging, signing keystores, target SDK 34/35, and Play Console submission.
+- 🌐 [**Production Deployment & Operations Guide**](./PRODUCTION_DEPLOYMENT.md): High-availability setup, zero-downtime updates with PM2, Nginx reverse proxy configuration, and automated backups.
+- 🗄️ [**Database Migration & Schema Guide**](./DATABASE_MIGRATION.md): Additive schema migrations, entity specifications, and Supabase PostgreSQL replication.
 
 ---
 
-## 📜 License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-*SAATHCHALO — Ek Raah, Kai Manzilein | Smarter • Safer • Shared Commutes*
+## 📄 License
+MIT License. Developed by the SAATHCHALO Engineering Team.

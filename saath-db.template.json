@@ -1,0 +1,159 @@
+{
+  "users": [],
+  "messages": [],
+  "votes": [],
+  "communities": [
+    {
+      "id": "knowledge-park",
+      "name": "Knowledge Park",
+      "city": "Greater Noida",
+      "icon": "fa-graduation-cap",
+      "desc": "College campuses & student housing hub"
+    },
+    {
+      "id": "pari-chowk",
+      "name": "Pari Chowk",
+      "city": "Greater Noida",
+      "icon": "fa-circle-nodes",
+      "desc": "Major transit interchange & metro terminal"
+    },
+    {
+      "id": "alpha-1",
+      "name": "Alpha 1 & 2",
+      "city": "Greater Noida",
+      "icon": "fa-building",
+      "desc": "Residential sectors & commercial markets"
+    },
+    {
+      "id": "noida-sec-62",
+      "name": "Noida Sector 62",
+      "city": "Noida",
+      "icon": "fa-city",
+      "desc": "IT hub, institutional area & Blue Line metro"
+    },
+    {
+      "id": "ghaziabad",
+      "name": "Ghaziabad Terminal",
+      "city": "Ghaziabad",
+      "icon": "fa-train-subway",
+      "desc": "Railway junction & intercity connector"
+    }
+  ],
+  "bookings": [],
+  "rides": [],
+  "ride_participants": [],
+  "reports": [],
+  "shuttles": [
+    {
+      "id": "sh-001",
+      "route": "Knowledge Park II ➔ Pari Chowk Metro",
+      "departure": "08:30 AM",
+      "arrival": "08:50 AM",
+      "fare": 30,
+      "total_seats": 20,
+      "available_seats": 20,
+      "vehicle_type": "Traveller • EV",
+      "status": "Available"
+    },
+    {
+      "id": "sh-002",
+      "route": "Pari Chowk ➔ Noida Sector 62 (Express)",
+      "departure": "09:00 AM",
+      "arrival": "09:45 AM",
+      "fare": 50,
+      "total_seats": 20,
+      "available_seats": 20,
+      "vehicle_type": "Traveller • CNG",
+      "status": "Available"
+    },
+    {
+      "id": "sh-003",
+      "route": "Knowledge Park II ➔ Botanical Garden Metro",
+      "departure": "05:15 PM",
+      "arrival": "06:00 PM",
+      "fare": 45,
+      "total_seats": 20,
+      "available_seats": 20,
+      "vehicle_type": "Traveller • EV",
+      "status": "Available"
+    },
+    {
+      "id": "sh-004",
+      "route": "Alpha 1 Commercial ➔ Knowledge Park II",
+      "departure": "06:30 PM",
+      "arrival": "06:45 PM",
+      "fare": 25,
+      "total_seats": 20,
+      "available_seats": 20,
+      "vehicle_type": "Traveller • CNG",
+      "status": "Available"
+    }
+  ],
+  "voteSessions": [
+    {
+      "id": "vs-knowledge-park-live",
+      "community_id": "knowledge-park",
+      "title": "Evening Transit Pooling",
+      "departure_time": "6:30 PM Today",
+      "status": "ACTIVE",
+      "vote_options": [
+        { "id": "opt-kp-1", "destination": "Pari Chowk Metro", "display_order": 1 },
+        { "id": "opt-kp-2", "destination": "Knowledge Park Campus", "display_order": 2 },
+        { "id": "opt-kp-3", "destination": "Noida Sector 62", "display_order": 3 },
+        { "id": "opt-kp-4", "destination": "Botanical Garden", "display_order": 4 }
+      ]
+    },
+    {
+      "id": "vs-pari-chowk-live",
+      "community_id": "pari-chowk",
+      "title": "Metro Interchange Connector",
+      "departure_time": "7:00 PM Today",
+      "status": "ACTIVE",
+      "vote_options": [
+        { "id": "opt-pc-1", "destination": "Knowledge Park Campuses", "display_order": 1 },
+        { "id": "opt-pc-2", "destination": "Alpha 1 Commercial Belt", "display_order": 2 },
+        { "id": "opt-pc-3", "destination": "Noida City Centre", "display_order": 3 },
+        { "id": "opt-pc-4", "destination": "Ghaziabad Junction", "display_order": 4 }
+      ]
+    },
+    {
+      "id": "vs-alpha-1-live",
+      "community_id": "alpha-1",
+      "title": "Sector Commuter Shared Transit",
+      "departure_time": "6:45 PM Today",
+      "status": "ACTIVE",
+      "vote_options": [
+        { "id": "opt-al-1", "destination": "Pari Chowk Interchange", "display_order": 1 },
+        { "id": "opt-al-2", "destination": "Knowledge Park Hostel Hub", "display_order": 2 },
+        { "id": "opt-al-3", "destination": "Delta 1 Sector Market", "display_order": 3 },
+        { "id": "opt-al-4", "destination": "Advant Navis Noida", "display_order": 4 }
+      ]
+    },
+    {
+      "id": "vs-noida-sec-62-live",
+      "community_id": "noida-sec-62",
+      "title": "IT Corridor Evening Return",
+      "departure_time": "6:30 PM Today",
+      "status": "ACTIVE",
+      "vote_options": [
+        { "id": "opt-n62-1", "destination": "Pari Chowk Greater Noida", "display_order": 1 },
+        { "id": "opt-n62-2", "destination": "Botanical Garden Metro", "display_order": 2 },
+        { "id": "opt-n62-3", "destination": "Knowledge Park Colleges", "display_order": 3 },
+        { "id": "opt-n62-4", "destination": "Indirapuram Terminal", "display_order": 4 }
+      ]
+    },
+    {
+      "id": "vs-ghaziabad-live",
+      "community_id": "ghaziabad",
+      "title": "Intercity Terminal Pooling",
+      "departure_time": "7:15 PM Today",
+      "status": "ACTIVE",
+      "vote_options": [
+        { "id": "opt-gz-1", "destination": "Noida Sector 62 IT Hub", "display_order": 1 },
+        { "id": "opt-gz-2", "destination": "Pari Chowk Transit Center", "display_order": 2 },
+        { "id": "opt-gz-3", "destination": "Knowledge Park Campus Ring", "display_order": 3 },
+        { "id": "opt-gz-4", "destination": "Anand Vihar ISBT", "display_order": 4 }
+      ]
+    }
+  ]
+}
