@@ -278,6 +278,15 @@ function allocateVehicleForCount(totalRiders, preferredFuel = null) {
     };
 }
 
+/**
+ * Format fare for customer-facing display in whole rupees (Prompt #23)
+ * @param {number} fare 
+ * @returns {string} e.g. "₹25"
+ */
+function formatCustomerFare(fare) {
+    return '₹' + Math.round(Number(fare) || 0);
+}
+
 // Universal export (Node.js & Browser)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -287,7 +296,8 @@ if (typeof module !== 'undefined' && module.exports) {
         calculateTotalVehicleFare,
         calculateSharedFare,
         calculateVehicleFare,
-        allocateVehicleForCount
+        allocateVehicleForCount,
+        formatCustomerFare
     };
 }
 if (typeof window !== 'undefined') {
@@ -298,4 +308,5 @@ if (typeof window !== 'undefined') {
     window.calculateSharedFare = calculateSharedFare;
     window.calculateVehicleFare = calculateVehicleFare;
     window.allocateVehicleForCount = allocateVehicleForCount;
+    window.formatCustomerFare = formatCustomerFare;
 }

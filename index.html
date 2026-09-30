@@ -81,19 +81,24 @@
                     <span class="font-bold text-2xl tracking-tight text-white">SAATH<span class="text-brandYellow">CHALO</span></span>
                 </a>
 
-                <!-- Desktop Navigation Links -->
-                <div class="hidden lg:flex items-center space-x-7">
-                    <a href="#booking" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Book a Ride</a>
-                    <a href="#shuttle" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Shuttle Schedule</a>
+                <!-- Desktop Navigation Links (Clean 5-Item Responsive Layout - Prompt #2) -->
+                <div class="hidden lg:flex items-center space-x-6 whitespace-nowrap">
+                    <a href="#" class="text-white hover:text-brandYellow font-semibold transition-colors">Home</a>
+                    <a href="#booking" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Book</a>
+                    <a href="#shuttle" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Shuttles</a>
                     <a href="#community" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Community</a>
-                    <a href="#live-community" class="text-gray-300 hover:text-brandYellow font-medium transition-colors flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>Live Community</a>
-                    <a href="#live-map" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Live Map</a>
-                    <a href="#my-rides" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">My Rides</a>
-                    <a href="javascript:void(0)" onclick="openRewardsModal()" class="text-gray-300 hover:text-brandYellow font-medium transition-colors flex items-center gap-1.5"><i class="fa-solid fa-coins text-brandYellow text-xs"></i>My Rewards</a>
+                    <a href="#live-map" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Map</a>
+                    <a href="#live-community" class="hidden">Live Community</a>
                 </div>
 
                 <!-- Right Action / User Profile Area -->
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2.5 whitespace-nowrap">
+                    <!-- Driver Portal Quick Link (Prompt #31) -->
+                    <a href="/driver" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold bg-gray-800 hover:bg-gray-700 text-brandYellow border border-brandYellow/40 px-3 py-1.5 rounded-full transition shadow-sm">
+                        <i class="fa-solid fa-id-card"></i>
+                        <span>Driver Portal</span>
+                    </a>
+
                     <!-- State A: Logged Out Navigation -->
                     <div id="loggedOutNav" class="flex items-center gap-2">
                         <button onclick="openLoginModal()" class="text-gray-300 hover:text-brandYellow font-bold px-3 py-2 text-xs transition">
@@ -105,7 +110,7 @@
                     </div>
 
                     <!-- State B: Logged In Navigation -->
-                    <div id="loggedInNav" class="hidden flex items-center gap-3">
+                    <div id="loggedInNav" class="hidden flex items-center gap-2.5">
                         <!-- Reward Points Reliability Badge (Section 5, 14, 16) -->
                         <button onclick="openRewardsModal()" id="navRewardsBadge" class="flex items-center gap-1.5 bg-brandYellow/15 hover:bg-brandYellow/25 border border-brandYellow/40 text-brandYellow text-xs font-bold px-3 py-1.5 rounded-full transition shadow-sm" title="View SAATHCHALO Reward Points & Reliability Status">
                             <i class="fa-solid fa-coins text-brandYellow"></i>
@@ -114,23 +119,21 @@
                         </button>
 
                         <!-- Profile Trigger Button -->
-                        <button onclick="openProfileModal()" class="flex items-center gap-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 p-1.5 pr-3.5 rounded-full transition shadow-sm group">
-                            <img id="navUserAvatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="User Profile" class="w-8 h-8 rounded-full object-cover border-2 border-brandYellow">
+                        <button onclick="openProfileModal()" class="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 p-1.5 pr-3 rounded-full transition shadow-sm group">
+                            <img id="navUserAvatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80" alt="User Profile" class="w-7 h-7 rounded-full object-cover border-2 border-brandYellow">
                             <div class="text-left hidden sm:block">
                                 <p class="text-xs font-bold text-white group-hover:text-brandYellow transition-colors" id="navUserName">Commuter</p>
-                                <p class="text-[10px] text-gray-400">Student Commuter</p>
                             </div>
                         </button>
 
                         <!-- Sign Out Button -->
                         <button onclick="handleLogout()" title="Sign Out" class="text-gray-400 hover:text-red-400 p-2 rounded-lg transition text-xs font-bold flex items-center gap-1">
                             <i class="fa-solid fa-right-from-bracket"></i>
-                            <span class="hidden md:inline">Logout</span>
                         </button>
                     </div>
 
                     <!-- Mobile Menu Button -->
-                    <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="lg:hidden text-gray-300 hover:text-white p-2 rounded-lg" aria-label="Toggle Navigation Menu">
+                    <button onclick="document.getElementById('mobileMenu').classList.toggle('hidden')" class="lg:hidden text-gray-300 hover:text-white p-2 rounded-lg min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Toggle Navigation Menu">
                         <i class="fa-solid fa-bars text-xl"></i>
                     </button>
                 </div>
@@ -139,12 +142,14 @@
 
         <!-- Mobile Menu Dropdown -->
         <div id="mobileMenu" class="hidden lg:hidden bg-darkTheme border-b border-gray-800 px-4 pt-2 pb-4 space-y-2">
+            <a href="#" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Home</a>
             <a href="#booking" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Book a Ride</a>
             <a href="#shuttle" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Shuttle Schedule</a>
             <a href="#community" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Community</a>
             <a href="#live-community" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>Live Community</a>
             <a href="#live-map" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Live Map</a>
             <a href="#my-rides" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">My Rides</a>
+            <a href="/driver" class="block py-2 text-brandYellow font-semibold text-sm border-b border-gray-800 flex items-center gap-2"><i class="fa-solid fa-id-card"></i>Driver Platform</a>
             <a href="javascript:void(0)" onclick="document.getElementById('mobileMenu').classList.add('hidden'); openRewardsModal();" class="block py-2 text-brandYellow font-semibold text-sm border-b border-gray-800 flex items-center justify-between">
                 <span><i class="fa-solid fa-coins mr-2"></i>My Rewards</span>
                 <span id="mobileRewardPoints" class="bg-brandYellow/20 text-brandYellow text-xs font-bold px-2 py-0.5 rounded-full">100 pts</span>
@@ -156,46 +161,100 @@
         </div>
     </nav>
 
-    <!-- Hero Section (Restored Original Layout) -->
+    <!-- Mobile Bottom Navigation Bar (Prompt #3) -->
+    <div class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-darkTheme/95 backdrop-blur-md border-t border-gray-800 flex justify-around items-center px-1 py-1 shadow-2xl safe-area-bottom">
+        <a href="#" class="flex flex-col items-center justify-center min-h-[44px] min-w-[54px] text-gray-400 hover:text-brandYellow transition py-1">
+            <i class="fa-solid fa-house text-base"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Home</span>
+        </a>
+        <a href="#booking" onclick="openBookingModal('Live Pooling', '₹20', 'fa-bolt', 'text-brandYellow', true)" class="flex flex-col items-center justify-center min-h-[44px] min-w-[54px] text-gray-400 hover:text-brandYellow transition py-1">
+            <i class="fa-solid fa-car text-base"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Book</span>
+        </a>
+        <a href="#my-rides" class="flex flex-col items-center justify-center min-h-[44px] min-w-[54px] text-gray-400 hover:text-brandYellow transition py-1">
+            <i class="fa-solid fa-clock-rotate-left text-base"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Rides</span>
+        </a>
+        <a href="#community" class="flex flex-col items-center justify-center min-h-[44px] min-w-[54px] text-gray-400 hover:text-brandYellow transition py-1">
+            <i class="fa-solid fa-users text-base"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Community</span>
+        </a>
+        <a href="#live-map" class="flex flex-col items-center justify-center min-h-[44px] min-w-[54px] text-gray-400 hover:text-brandYellow transition py-1">
+            <i class="fa-solid fa-map-location-dot text-base"></i>
+            <span class="text-[10px] font-semibold mt-0.5">Map</span>
+        </a>
+    </div>
+
+    <!-- Hero Section (Above the fold mobility search - Prompt #5 & #6) -->
     <section class="hero-bg min-h-screen flex items-center relative pt-20 overflow-hidden">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-20">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                <!-- Text Content -->
-                <div class="max-w-3xl">
-                    <div class="inline-block border-b-2 border-brandYellow mb-6">
-                        <p class="text-brandYellow font-semibold tracking-widest uppercase text-sm mb-1">SMARTER • SAFER • SHARED COMMUTES</p>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full py-16 sm:py-20">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+                <!-- Text Content & Mobility Search Card -->
+                <div class="lg:col-span-7 max-w-2xl">
+                    <div class="inline-block border-b-2 border-brandYellow mb-4">
+                        <p class="text-brandYellow font-semibold tracking-widest uppercase text-xs sm:text-sm mb-1">SMARTER • SAFER • SHARED COMMUTES</p>
                     </div>
-                    <h1 class="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-6">
-                        What if <span class="text-brandYellow">Empty Seats</span> <br>
-                        could become <br>
+                    <h1 class="text-4xl sm:text-6xl font-extrabold text-white leading-tight mb-3">
+                        What if <span class="text-brandYellow">Empty Seats</span> <br class="hidden sm:inline">
+                        could become <br class="hidden sm:inline">
                         <span class="text-brandYellow">Affordable Rides?</span>
                     </h1>
-                    <p class="text-xl md:text-2xl text-gray-300 mb-8 font-light">
-                        Ek Raah, Kai Manzilein | Smarter • Safer • Shared Commutes
+                    <p class="text-base sm:text-xl text-gray-300 mb-6 font-light">
+                        Ek Raah, Kai Manzilein | Greater Noida & NCR Daily Commute
                     </p>
-                    <div class="flex flex-col sm:flex-row gap-4">
-                        <a href="#booking" class="bg-brandYellow text-darkTheme text-center px-8 py-4 rounded-full font-bold text-lg hover:bg-yellow-400 transition-colors shadow-lg hover:shadow-yellow-500/30">
-                            Book a Ride Now
-                        </a>
-                        <a href="#live-map" class="border-2 border-brandYellow text-brandYellow text-center px-8 py-4 rounded-full font-bold text-lg hover:bg-brandYellow hover:text-darkTheme transition-colors">
-                            Explore Live Mobility Map
-                        </a>
+
+                    <!-- ABOVE-THE-FOLD MOBILITY SEARCH CARD (Prompt #5 & #6) -->
+                    <div class="bg-gray-900/90 backdrop-blur-md border border-gray-800 rounded-3xl p-5 shadow-2xl">
+                        <div class="flex items-center justify-between mb-3 pb-2.5 border-b border-gray-800">
+                            <span class="text-xs font-black uppercase tracking-wider text-brandYellow flex items-center gap-1.5">
+                                <i class="fa-solid fa-location-arrow"></i> Where are you going?
+                            </span>
+                            <!-- Morning / Evening Toggle -->
+                            <div class="inline-flex rounded-xl bg-gray-800 p-0.5 border border-gray-700">
+                                <button id="heroSessionMorning" onclick="setSessionType('morning')" class="px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-gray-400 hover:text-white">
+                                    <span>🌅</span> Morning
+                                </button>
+                                <button id="heroSessionEvening" onclick="setSessionType('evening')" class="px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-brandYellow text-darkTheme shadow-sm">
+                                    <span>🌆</span> Evening
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-3">
+                            <div class="relative">
+                                <div class="absolute left-3 top-3 w-2.5 h-2.5 rounded-full bg-brandYellow border-2 border-darkTheme"></div>
+                                <input type="text" id="heroPickupInput" placeholder="Pickup (e.g. Knowledge Park II Metro)" value="Knowledge Park, Greater Noida" class="w-full bg-gray-800 border border-gray-700 rounded-xl pl-8 pr-3 py-2.5 text-xs text-white placeholder-gray-500 focus:ring-2 focus:ring-brandYellow outline-none transition">
+                            </div>
+                            <div class="relative">
+                                <div class="absolute left-3 top-3 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-darkTheme"></div>
+                                <input type="text" id="heroDropoffInput" placeholder="Destination (e.g. Pari Chowk / Alpha 1)" value="Pari Chowk, Greater Noida" class="w-full bg-gray-800 border border-gray-700 rounded-xl pl-8 pr-3 py-2.5 text-xs text-white placeholder-gray-500 focus:ring-2 focus:ring-brandYellow outline-none transition">
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-center gap-2.5">
+                            <button onclick="handleHeroSearchAndBook()" class="w-full sm:flex-1 bg-brandYellow hover:bg-yellow-400 text-darkTheme font-extrabold py-3 rounded-xl text-xs sm:text-sm transition shadow-lg flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-magnifying-glass"></i> Find & Book Shared Ride
+                            </button>
+                            <a href="#live-map" class="w-full sm:w-auto text-center px-4 py-3 rounded-xl text-xs font-bold text-gray-300 hover:text-brandYellow border border-gray-700 hover:border-gray-600 transition whitespace-nowrap">
+                                <i class="fa-solid fa-map-location-dot mr-1"></i> Live Map
+                            </a>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Hero Image Graphic (Restored Original with Authentic Knowledge Park II Metro Station) -->
-                <div class="hidden lg:block relative z-10">
+                <div class="lg:col-span-5 hidden lg:block relative z-10">
                     <div class="absolute inset-0 bg-brandYellow rounded-full blur-[120px] opacity-20"></div>
-                    <div class="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-800 transform rotate-3 hover:rotate-0 transition-transform duration-500 bg-gray-900">
-                        <img src="knowledge-park-metro.png" alt="Knowledge Park II Metro Station, Greater Noida" class="w-full h-[500px] object-cover object-top opacity-95 hover:opacity-100 transition-opacity">
+                    <div class="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-800 transform rotate-2 hover:rotate-0 transition-transform duration-500 bg-gray-900">
+                        <img src="knowledge-park-metro.png" alt="Knowledge Park II Metro Station, Greater Noida" class="w-full h-[460px] object-cover object-top opacity-95 hover:opacity-100 transition-opacity">
                         <!-- Floating UI Badge -->
-                        <div class="absolute bottom-8 left-8 bg-white/95 backdrop-blur rounded-2xl p-4 shadow-2xl flex items-center gap-4 animate-bounce" style="animation-duration: 3s;">
-                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-xl">
+                        <div class="absolute bottom-6 left-6 right-6 bg-white/95 backdrop-blur rounded-2xl p-3.5 shadow-2xl flex items-center gap-3.5">
+                            <div class="w-11 h-11 bg-green-100 rounded-xl flex items-center justify-center text-green-600 text-lg flex-shrink-0">
                                 <i class="fa-solid fa-check-double"></i>
                             </div>
                             <div>
-                                <p class="text-xs text-gray-500 font-bold uppercase tracking-wider">Ride Matched</p>
-                                <p class="text-lg font-extrabold text-darkTheme">₹24.00 <span class="text-xs text-emerald-600 font-bold ml-1">Traveller • EV</span></p>
+                                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Shared Pool Matched</p>
+                                <p class="text-base font-extrabold text-darkTheme">₹24 <span class="text-xs text-emerald-600 font-bold ml-1">Auto • CNG</span></p>
                             </div>
                         </div>
                     </div>
@@ -246,15 +305,15 @@
                     <button onclick="openBookingModal('Auto Service', '₹24.67', 'fa-taxi', 'text-brandYellow')" class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition shadow-md">Book Auto Now</button>
                 </div>
 
-                <!-- Method 4: Live Pooling -->
-                <div class="bg-gradient-to-br from-purple-50 to-pink-50 p-8 rounded-2xl shadow-lg border border-purple-200 hover:-translate-y-2 transition-transform text-center flex flex-col h-full relative overflow-hidden">
-                    <div class="absolute top-0 right-0 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg animate-pulse">LIVE</div>
-                    <div class="w-20 h-20 mx-auto bg-purple-100 rounded-full flex items-center justify-center mb-6 shadow-inner">
-                        <i class="fa-solid fa-bolt text-4xl text-purple-600"></i>
+                <!-- Method 4: Live Pooling (Unified SAATHCHALO Navy/Yellow theme) -->
+                <div class="bg-gray-900 text-white p-8 rounded-2xl shadow-xl border-2 border-brandYellow hover:-translate-y-2 transition-transform text-center flex flex-col h-full relative overflow-hidden">
+                    <div class="absolute top-0 right-0 bg-brandYellow text-darkTheme text-xs font-black px-3 py-1 rounded-bl-lg animate-pulse">LIVE</div>
+                    <div class="w-20 h-20 mx-auto bg-brandYellow/15 border border-brandYellow/30 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                        <i class="fa-solid fa-bolt text-4xl text-brandYellow"></i>
                     </div>
-                    <h4 class="text-2xl font-bold mb-3 text-darkTheme">Live Pooling</h4>
-                    <p class="text-gray-600 flex-grow mb-6">Hop into an auto already en route to your destination. Fill empty seats & ride super cheap!</p>
-                    <button onclick="openBookingModal('Live Pooling', '₹20.00', 'fa-bolt', 'text-purple-600', true)" class="w-full bg-gradient-to-r from-purple-600 to-pink-500 text-white font-bold py-3 rounded-xl hover:from-purple-700 hover:to-pink-600 transition shadow-md shadow-purple-500/30">Find Active Autos</button>
+                    <h4 class="text-2xl font-bold mb-3 text-white">Live Pooling</h4>
+                    <p class="text-gray-300 flex-grow mb-6 text-sm">Hop into an auto already en route to your destination. Fill empty seats & ride super cheap!</p>
+                    <button onclick="openBookingModal('Live Pooling', '₹20.00', 'fa-bolt', 'text-brandYellow', true)" class="w-full bg-brandYellow hover:bg-yellow-400 text-darkTheme font-bold py-3 rounded-xl transition shadow-md">Find Active Autos</button>
                 </div>
             </div>
         </div>
@@ -373,13 +432,21 @@
                 <div class="lg:col-span-5 space-y-6">
                     <!-- Voting Box -->
                     <div class="bg-gray-900/90 rounded-3xl p-6 border border-gray-800">
-                        <div class="flex justify-between items-start mb-4">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 pb-3 border-b border-gray-800">
                             <div>
-                                <span class="text-[10px] font-extrabold text-brandYellow uppercase tracking-wider bg-brandYellow/10 px-2 py-0.5 rounded">SHARED COMMUTE</span>
-                                <h3 class="text-lg font-black text-white mt-1">Plan a Shared Ride</h3>
-                                <p class="text-xs text-gray-400">Where are you heading today? Vote to pool together.</p>
+                                <span class="text-[10px] font-extrabold text-brandYellow uppercase tracking-wider bg-brandYellow/10 px-2 py-0.5 rounded">SHARED COMMUTE POLL</span>
+                                <h3 class="text-base font-black text-white mt-1">Plan a Shared Route</h3>
+                                <p class="text-xs text-gray-400">Vote on campus destination. Independent Morning & Evening sessions.</p>
                             </div>
-                            <span class="text-xs font-mono font-bold text-gray-400">Ends 6:15 PM</span>
+                            <!-- Morning / Evening Poll Switcher (Prompt #6 & #27) -->
+                            <div class="inline-flex rounded-xl bg-gray-800 p-0.5 border border-gray-700">
+                                <button id="pollTabMorning" onclick="setSessionType('morning')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-gray-400 hover:text-white">
+                                    <span>🌅</span> Morning
+                                </button>
+                                <button id="pollTabEvening" onclick="setSessionType('evening')" class="px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-brandYellow text-darkTheme shadow-sm">
+                                    <span>🌆</span> Evening
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Live Vote Destination Options -->
@@ -830,17 +897,17 @@
                 <button onclick="openTermsModal()" class="hover:text-brandYellow transition text-gray-400">Community Guidelines & Terms</button>
             </div>
             <p class="text-xs text-gray-400 text-center md:text-right">
-                Ek Raah, Kai Manzilein • Smarter, Safer, Shared Commutes
+                Built by Team Null Pointers · Segue 3.0 • Smarter, Safer, Shared Commutes
             </p>
         </div>
     </footer>
 
-    <!-- Floating Action Button for Live Booking -->
-    <div class="fixed bottom-6 right-6 md:bottom-8 md:right-8 z-30">
-        <button onclick="openBookingModal('Live Pooling', '₹20.00', 'fa-bolt', 'text-purple-600', true)" class="relative flex items-center justify-center bg-gradient-to-r from-purple-600 to-pink-500 text-white rounded-full px-6 py-4 shadow-[0_10px_25px_-5px_rgba(147,51,234,0.6)] hover:scale-105 hover:-translate-y-1 transition-all duration-300 group">
-            <span class="absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-40 animate-ping"></span>
-            <i class="fa-solid fa-bolt text-xl mr-3 relative z-10"></i>
-            <span class="font-bold text-xs sm:text-sm tracking-wide relative z-10">LIVE BOOKING</span>
+    <!-- Floating Action Button for Live Booking (Prompt #4 - SAATHCHALO Navy/Yellow theme) -->
+    <div class="fixed bottom-16 right-4 md:bottom-8 md:right-8 z-30">
+        <button onclick="openBookingModal('Live Pooling', '₹20.00', 'fa-bolt', 'text-brandYellow', true)" class="relative flex items-center justify-center bg-darkTheme text-brandYellow border-2 border-brandYellow rounded-full px-5 py-3.5 shadow-2xl hover:scale-105 hover:bg-gray-900 transition-all duration-300 group">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-brandYellow opacity-25 animate-ping"></span>
+            <i class="fa-solid fa-bolt text-lg mr-2.5 relative z-10 text-brandYellow"></i>
+            <span class="font-extrabold text-xs sm:text-sm tracking-wide relative z-10 text-white">LIVE BOOKING</span>
         </button>
     </div>
 
@@ -860,7 +927,20 @@
                 <!-- State A: Booking Input Panel -->
                 <div id="bookingInputPanel" class="flex flex-col h-full">
                     <h3 class="text-2xl font-bold text-darkTheme mb-1" id="modalTitle">Book a Ride</h3>
-                    <p class="text-gray-500 mb-6 text-xs" id="modalSubtitle">Select your pickup and drop locations.</p>
+                    <p class="text-gray-500 mb-4 text-xs" id="modalSubtitle">Select your pickup, drop, and commute session.</p>
+
+                    <!-- Commute Session Switcher (Prompt #6) -->
+                    <div class="mb-3">
+                        <label class="block text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Commute Session</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="modalSessionMorning" onclick="setSessionType('morning')" class="py-2 px-3 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 hover:border-brandYellow transition text-center flex items-center justify-center gap-1">
+                                <span>🌅</span> Morning
+                            </button>
+                            <button type="button" id="modalSessionEvening" onclick="setSessionType('evening')" class="py-2 px-3 rounded-xl border-2 border-brandYellow bg-brandYellow/15 text-xs font-bold text-darkTheme transition text-center flex items-center justify-center gap-1">
+                                <span>🌆</span> Evening
+                            </button>
+                        </div>
+                    </div>
                     
                     <div class="relative pl-8 mb-4">
                         <!-- timeline line -->
@@ -906,9 +986,21 @@
                         <!-- Populated by renderRouteCalculationUI() -->
                     </div>
                     
-                    <div class="mt-auto pt-4 border-t border-gray-200">
-                        <button id="confirmRideBtn" onclick="confirmBookingAction()" class="w-full bg-brandYellow text-darkTheme font-bold py-4 rounded-2xl hover:bg-yellow-400 transition shadow-lg text-sm">
-                            Confirm Ride
+                    <!-- Sticky Modal Footer (Prompt #12 & #13) -->
+                    <div class="mt-auto sticky bottom-0 bg-gray-50 pt-3 pb-2 border-t border-gray-200 z-10">
+                        <div class="flex items-center justify-between mb-2 px-1">
+                            <div>
+                                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Your Fair Fare</p>
+                                <p id="modalFooterFare" class="text-xl font-black text-darkTheme">₹24</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Allotted Vehicle</p>
+                                <p id="modalFooterVehicle" class="text-xs font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Auto • CNG</p>
+                            </div>
+                        </div>
+                        <button id="confirmRideBtn" onclick="confirmBookingAction()" class="w-full bg-brandYellow text-darkTheme font-extrabold py-3.5 rounded-xl hover:bg-yellow-400 transition shadow-lg text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-circle-check"></i>
+                            <span id="confirmRideBtnText">Confirm Booking</span>
                         </button>
                     </div>
                 </div>
@@ -971,6 +1063,29 @@
     </div>
 
     <!-- ========================================== -->
+    <!-- MODAL: VOTE CANCELLATION MODAL (Prompt #28) -->
+    <!-- ========================================== -->
+    <div id="voteCancelModal" class="fixed inset-0 z-50 hidden bg-darkTheme/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 border-2 border-brandYellow text-darkTheme text-center animate-in fade-in zoom-in duration-200">
+            <div class="w-12 h-12 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto text-xl mb-3">
+                <i class="fa-solid fa-rotate-left"></i>
+            </div>
+            <h3 class="text-lg font-black text-darkTheme mb-1">Cancel your vote?</h3>
+            <p class="text-xs text-gray-600 mb-5 leading-relaxed">
+                Your vote will be removed and live destination pool counts updated immediately.
+            </p>
+            <div class="flex gap-2.5">
+                <button onclick="closeVoteCancelModal()" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2.5 rounded-xl text-xs transition">
+                    Keep Vote
+                </button>
+                <button onclick="confirmVoteCancellation()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md">
+                    Cancel Vote
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
     <!-- MODAL: REAL LOGIN MODAL                    -->
     <!-- ========================================== -->
     <div id="loginModal" class="fixed inset-0 z-50 hidden bg-darkTheme/85 backdrop-blur-sm flex items-center justify-center p-4">
@@ -1012,9 +1127,17 @@
                 </button>
             </form>
 
-            <div class="mt-6 pt-5 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
-                <span>New commuter?</span>
-                <button onclick="openRegisterModal()" class="font-bold text-brandYellow hover:underline">Create Account</button>
+            <div class="mt-6 pt-5 border-t border-gray-800 flex flex-col gap-2.5 text-xs text-gray-400">
+                <div class="flex justify-between items-center">
+                    <span>New commuter?</span>
+                    <button onclick="openRegisterModal()" class="font-bold text-brandYellow hover:underline">Create Account</button>
+                </div>
+                <div class="pt-2 border-t border-gray-800/60 flex justify-between items-center text-[11px]">
+                    <span class="text-gray-400">Campus driver or vehicle operator?</span>
+                    <a href="/driver" class="text-brandYellow hover:underline font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-id-card"></i> Driver Platform
+                    </a>
+                </div>
             </div>
         </div>
     </div>

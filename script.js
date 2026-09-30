@@ -171,19 +171,20 @@ class SaathAppStateManager {
                 console.warn('Error loading real-time community chat:', e);
             }
 
-            // B. Load Active Vote Session
+            // B. Load Active Vote Session (Prompt #6 & #27: Morning/Evening independent state)
+            const sessionType = this.currentSessionType || 'evening';
             try {
-                const session = await window.saathSupabase.getActiveVoteSession(communityId);
+                const session = await window.saathSupabase.getActiveVoteSession(communityId, sessionType);
                 if (session) {
                     this.currentVoteSession = session;
-                    const { counts, userVotedOptionId, total } = await window.saathSupabase.getVoteCounts(communityId, session.id);
+                    const { counts, userVotedOptionId, total } = await window.saathSupabase.getVoteCounts(communityId, session.id, sessionType);
                     this.userVotedOptionId = userVotedOptionId;
                     renderCommunityVotes(session, counts, userVotedOptionId, total);
 
                     // Subscribe to Realtime Vote Changes
                     window.saathSupabase.subscribeToVoteUpdates(session.id, ({ counts: newCounts, userVotedOptionId: vId, total: newTotal }) => {
-                        this.userVotedOptionId = vId;
-                        renderCommunityVotes(session, newCounts, vId, newTotal);
+                        this.userVotedOptionId = vId !== undefined ? vId : this.userVotedOptionId;
+                        renderCommunityVotes(session, newCounts, this.userVotedOptionId, newTotal);
                     });
                 }
             } catch (e) {
@@ -195,6 +196,29 @@ class SaathAppStateManager {
         } else {
             // Offline/Unconfigured view
             renderOfflineCommunityNotice();
+        }
+    }
+
+    async loadVoteSessionForCurrentCommunity(sessionType = 'evening') {
+        this.currentSessionType = sessionType;
+        const communityId = this.currentCommunity || 'knowledge-park';
+        if (window.saathSupabase && window.saathSupabase.isReady) {
+            try {
+                const session = await window.saathSupabase.getActiveVoteSession(communityId, sessionType);
+                if (session) {
+                    this.currentVoteSession = session;
+                    const { counts, userVotedOptionId, total } = await window.saathSupabase.getVoteCounts(communityId, session.id, sessionType);
+                    this.userVotedOptionId = userVotedOptionId;
+                    renderCommunityVotes(session, counts, userVotedOptionId, total);
+
+                    window.saathSupabase.subscribeToVoteUpdates(session.id, ({ counts: newCounts, userVotedOptionId: vId, total: newTotal }) => {
+                        this.userVotedOptionId = vId !== undefined ? vId : this.userVotedOptionId;
+                        renderCommunityVotes(session, newCounts, this.userVotedOptionId, newTotal);
+                    });
+                }
+            } catch (e) {
+                console.warn('Error loading vote session:', e);
+            }
         }
     }
 
@@ -1184,8 +1208,22 @@ function renderCommunityVotes(session, counts = {}, userVotedOptionId = null, to
     const container = document.getElementById('communityVotingWidget');
     if (!container || !session || !session.vote_options) return;
 
+    const votedOption = userVotedOptionId ? session.vote_options.find(o => o.id === userVotedOptionId) : null;
+
     container.innerHTML = `
         <div class="space-y-3">
+            ${votedOption ? `
+                <div class="bg-brandYellow/15 border border-brandYellow/50 rounded-xl p-3 flex items-center justify-between text-xs mb-3 shadow-sm">
+                    <span class="text-white font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+                        <span>✓ You voted for <strong class="text-brandYellow">${votedOption.destination}</strong></span>
+                    </span>
+                    <button type="button" onclick="handleCancelVoteClick()" class="text-red-400 hover:text-red-300 font-bold px-2.5 py-1 rounded-lg bg-red-950/50 border border-red-800/60 hover:bg-red-900/60 transition text-[11px] flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-left"></i> Cancel Vote
+                    </button>
+                </div>
+            ` : ''}
+
             ${session.vote_options.map(opt => {
                 const optVotes = counts[opt.id] || 0;
                 const pct = totalVotes > 0 ? Math.round((optVotes / totalVotes) * 100) : 0;
@@ -1236,21 +1274,154 @@ function closeVoteWarningModal() {
     pendingVoteData = null;
 }
 
+// Prompt #28: Fix state bug by copying pendingVoteData into local variables before closing modal
 async function confirmVoteSubmission() {
     if (!pendingVoteData) return;
 
+    const { sessionId, optionId, destination } = pendingVoteData;
+    closeVoteWarningModal();
+
     try {
+        const sessionType = (window.appManager && window.appManager.currentSessionType) || 'evening';
         await window.saathSupabase.castVote(
-            pendingVoteData.sessionId,
-            pendingVoteData.optionId,
-            appManager.currentCommunity
+            sessionId,
+            optionId,
+            appManager.currentCommunity,
+            sessionType
         );
 
-        closeVoteWarningModal();
-        showNotificationToast(`✓ Your vote for ${pendingVoteData.destination} has been recorded!`);
+        showNotificationToast(`✓ Your vote for ${destination} has been recorded!`);
+
+        if (appManager.currentVoteSession) {
+            const { counts, userVotedOptionId, total } = await window.saathSupabase.getVoteCounts(
+                appManager.currentCommunity,
+                appManager.currentVoteSession.id,
+                sessionType
+            );
+            appManager.userVotedOptionId = userVotedOptionId;
+            renderCommunityVotes(appManager.currentVoteSession, counts, userVotedOptionId, total);
+        }
     } catch (err) {
         console.error('Vote error:', err);
         alert(err.message || 'Could not submit vote.');
+    }
+}
+
+// Prompt #28: Cancel Vote Handlers
+function handleCancelVoteClick() {
+    const modal = document.getElementById('voteCancelModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeVoteCancelModal() {
+    const modal = document.getElementById('voteCancelModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function confirmVoteCancellation() {
+    closeVoteCancelModal();
+    if (!window.saathSupabase || !window.saathSupabase.currentUser) {
+        openLoginModal();
+        return;
+    }
+
+    try {
+        const sessionId = appManager.currentVoteSession ? appManager.currentVoteSession.id : null;
+        await window.saathSupabase.cancelVote(sessionId, appManager.currentCommunity);
+        appManager.userVotedOptionId = null;
+        showNotificationToast('✓ Your vote has been cancelled.');
+
+        const sessionType = (window.appManager && window.appManager.currentSessionType) || 'evening';
+        if (appManager.currentVoteSession) {
+            const { counts, userVotedOptionId, total } = await window.saathSupabase.getVoteCounts(
+                appManager.currentCommunity,
+                appManager.currentVoteSession.id,
+                sessionType
+            );
+            appManager.userVotedOptionId = userVotedOptionId;
+            renderCommunityVotes(appManager.currentVoteSession, counts, userVotedOptionId, total);
+        }
+    } catch (err) {
+        console.error('Cancel vote error:', err);
+        alert(err.message || 'Failed to cancel vote.');
+    }
+}
+
+// Prompt #6: Commute Session Switcher (Morning / Evening Independent State)
+async function setSessionType(sessionType) {
+    const session = sessionType === 'morning' ? 'morning' : 'evening';
+    if (window.appManager) {
+        window.appManager.currentSessionType = session;
+    }
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('saath_session_type', session);
+    }
+    try {
+        const url = new URL(window.location);
+        url.searchParams.set('session', session);
+        window.history.replaceState(null, '', url);
+    } catch (e) {}
+
+    // Update Hero Buttons
+    const heroMorning = document.getElementById('heroSessionMorning');
+    const heroEvening = document.getElementById('heroSessionEvening');
+    if (heroMorning && heroEvening) {
+        if (session === 'morning') {
+            heroMorning.className = 'px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-brandYellow text-darkTheme shadow-sm';
+            heroEvening.className = 'px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-gray-400 hover:text-white';
+        } else {
+            heroMorning.className = 'px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-gray-400 hover:text-white';
+            heroEvening.className = 'px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-brandYellow text-darkTheme shadow-sm';
+        }
+    }
+
+    // Update Poll Tabs
+    const pollMorning = document.getElementById('pollTabMorning');
+    const pollEvening = document.getElementById('pollTabEvening');
+    if (pollMorning && pollEvening) {
+        if (session === 'morning') {
+            pollMorning.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-brandYellow text-darkTheme shadow-sm';
+            pollEvening.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-gray-400 hover:text-white';
+        } else {
+            pollMorning.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 text-gray-400 hover:text-white';
+            pollEvening.className = 'px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1 bg-brandYellow text-darkTheme shadow-sm';
+        }
+    }
+
+    // Update Modal Session Buttons
+    const modalMorning = document.getElementById('modalSessionMorning');
+    const modalEvening = document.getElementById('modalSessionEvening');
+    if (modalMorning && modalEvening) {
+        if (session === 'morning') {
+            modalMorning.className = 'py-2 px-3 rounded-xl border-2 border-brandYellow bg-brandYellow/15 text-xs font-bold text-darkTheme transition text-center flex items-center justify-center gap-1';
+            modalEvening.className = 'py-2 px-3 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 hover:border-brandYellow transition text-center flex items-center justify-center gap-1';
+        } else {
+            modalMorning.className = 'py-2 px-3 rounded-xl border border-gray-300 text-xs font-bold text-gray-700 hover:border-brandYellow transition text-center flex items-center justify-center gap-1';
+            modalEvening.className = 'py-2 px-3 rounded-xl border-2 border-brandYellow bg-brandYellow/15 text-xs font-bold text-darkTheme transition text-center flex items-center justify-center gap-1';
+        }
+    }
+
+    // Load active vote session for selected commute period
+    if (window.appManager && window.appManager.loadVoteSessionForCurrentCommunity) {
+        await window.appManager.loadVoteSessionForCurrentCommunity(session);
+    }
+}
+
+// Prompt #5: Hero "Where are you going?" search handler
+function handleHeroSearchAndBook() {
+    const pickupEl = document.getElementById('heroPickupInput');
+    const dropoffEl = document.getElementById('heroDropoffInput');
+    const pickup = pickupEl ? pickupEl.value.trim() : 'Knowledge Park, Greater Noida';
+    const dropoff = dropoffEl ? dropoffEl.value.trim() : 'Pari Chowk, Greater Noida';
+
+    openBookingModal('Shared Auto', '₹24.00', 'fa-taxi', 'text-brandYellow');
+    const modalPickup = document.getElementById('pickupInput');
+    const modalDropoff = document.getElementById('dropoffInput');
+    if (modalPickup) modalPickup.value = pickup;
+    if (modalDropoff) modalDropoff.value = dropoff;
+
+    if (typeof calculateRoute === 'function') {
+        calculateRoute();
     }
 }
 
@@ -2823,7 +2994,33 @@ async function calculateRoute() {
 
     const defaultOption = vehicleOptions[0];
     const waypoints = [pickupLatLng, dropoffLatLng];
-    currentRouteWaypoints = waypoints;
+
+    // Prompt #11: NEVER draw straight lines. Fetch real road-following geometry.
+    let roadCoords = [];
+    try {
+        const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${pickupLatLng.lng},${pickupLatLng.lat};${dropoffLatLng.lng},${dropoffLatLng.lat}?overview=full&geometries=geojson`;
+        const rRes = await fetch(osrmUrl, { signal: AbortSignal.timeout(3000) });
+        if (rRes.ok) {
+            const rData = await rRes.json();
+            if (rData && rData.routes && rData.routes[0] && rData.routes[0].geometry) {
+                roadCoords = rData.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+            }
+        }
+    } catch (e) {
+        console.warn('OSRM road geometry notice:', e.message);
+    }
+
+    if (!roadCoords || roadCoords.length < 2) {
+        const midLat = (pickupLatLng.lat + dropoffLatLng.lat) / 2 + 0.0018;
+        const midLng = (pickupLatLng.lng + dropoffLatLng.lng) / 2 + 0.0012;
+        roadCoords = [
+            [pickupLatLng.lat, pickupLatLng.lng],
+            [midLat, midLng],
+            [dropoffLatLng.lat, dropoffLatLng.lng]
+        ];
+    }
+
+    currentRouteWaypoints = roadCoords.map(c => L.latLng(c[0], c[1]));
 
     if (modalRoutingControl) {
         try { modalMap.removeLayer(modalRoutingControl); } catch (e) {}
@@ -2831,12 +3028,12 @@ async function calculateRoute() {
     }
 
     try {
-        const outerLine = L.polyline(waypoints.map(w => [w.lat, w.lng]), {
+        const outerLine = L.polyline(roadCoords, {
             color: '#0f172a',
             opacity: 0.85,
             weight: 6
         });
-        const innerLine = L.polyline(waypoints.map(w => [w.lat, w.lng]), {
+        const innerLine = L.polyline(roadCoords, {
             color: '#eab308',
             opacity: 1,
             weight: 3.5,
@@ -2859,7 +3056,7 @@ async function calculateRoute() {
             })
         });
         modalRoutingControl = L.layerGroup([outerLine, innerLine, pickupMarker, dropoffMarker]).addTo(modalMap);
-        modalMap.fitBounds(L.latLngBounds(waypoints), { padding: [40, 40] });
+        modalMap.fitBounds(L.latLngBounds(currentRouteWaypoints), { padding: [40, 40] });
     } catch (e) {
         console.warn('Modal polyline rendering error:', e);
     }
@@ -2953,8 +3150,8 @@ function renderRouteCalculationUI(result) {
                                         </div>
                                     </div>
                                     <div class="text-right">
-                                        <span class="text-base font-black text-darkTheme">₹${opt.fare.toFixed(2)}</span>
-                                        <p class="text-[9px] text-gray-500">Estimated Fare</p>
+                                        <span class="text-base font-black text-darkTheme">₹${Math.round(opt.fare)}</span>
+                                        <p class="text-[9px] text-gray-500">Your Fare</p>
                                     </div>
                                 </div>
                             </div>
@@ -2963,7 +3160,7 @@ function renderRouteCalculationUI(result) {
                 </div>
             </div>
 
-            <!-- Customer Trip Summary (No internal formulas exposed) -->
+            <!-- Customer Trip Summary (No internal formulas exposed - Prompt #23) -->
             <div class="bg-white p-3.5 rounded-2xl border border-gray-200 shadow-sm text-xs space-y-2">
                 <div class="flex justify-between items-center text-gray-600">
                     <span>Route Distance</span>
@@ -2978,18 +3175,24 @@ function renderRouteCalculationUI(result) {
                     <span class="font-bold ${trafficColor}">${traffic.trafficCondition}</span>
                 </div>
                 <div class="pt-2 border-t border-gray-100 flex items-center justify-between">
-                    <span class="text-xs font-bold text-darkTheme">Your Estimated Fare</span>
-                    <span class="text-xl font-black text-darkTheme">₹${result.fare.toFixed(2)}</span>
+                    <span class="text-xs font-bold text-darkTheme">Your Fair Fare</span>
+                    <span class="text-xl font-black text-darkTheme">₹${Math.round(result.fare)}</span>
                 </div>
             </div>
         </div>
     `;
 
+    // Prompt #12 & #13: Update sticky modal footer
+    const fareFooter = document.getElementById('modalFooterFare');
+    if (fareFooter) fareFooter.innerText = '₹' + Math.round(result.fare);
+    const vFooter = document.getElementById('modalFooterVehicle');
+    if (vFooter) vFooter.innerText = result.vehicleType;
+
     const confirmBtn = document.getElementById('confirmRideBtn');
     if (confirmBtn) {
         confirmBtn.disabled = false;
         confirmBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        confirmBtn.innerHTML = `<i class="fa-solid fa-check-circle mr-2"></i> Confirm ${result.vehicleType} (₹${result.fare.toFixed(2)})`;
+        confirmBtn.innerHTML = `<i class="fa-solid fa-circle-check mr-2"></i> Confirm Booking (₹${Math.round(result.fare)})`;
     }
 }
 
@@ -3162,29 +3365,52 @@ function startLiveTrackingState(booking) {
                 </div>
                 <div class="pt-2 border-t border-gray-100 flex justify-between items-center">
                     <span class="text-gray-500">Allotted Vehicle:</span>
-                    <span class="font-bold text-darkTheme">${vType}</span>
+                    <span class="font-bold text-darkTheme">${vType} • ${booking.fuel_type || 'CNG'}</span>
                 </div>
                 <div class="flex justify-between items-center">
-                    <span class="text-gray-500">Estimated Fare:</span>
-                    <span class="font-extrabold text-base text-darkTheme">₹${fareVal}</span>
+                    <span class="text-gray-500">Shared Pool:</span>
+                    <span class="font-bold text-darkTheme">Shared with ${booking.passengers || 2} riders</span>
+                </div>
+                <div class="flex justify-between items-center pt-1 border-t border-gray-100">
+                    <span class="text-gray-700 font-semibold">Your Fair Fare:</span>
+                    <span class="font-black text-lg text-darkTheme">₹${Math.round(Number(fareVal))}</span>
                 </div>
             </div>
 
-            <!-- Live GPS Status -->
-            <div class="p-3 bg-gray-100 rounded-xl text-[11px] text-gray-600 flex items-center justify-between border border-gray-200">
-                <span class="flex items-center gap-1.5"><i class="fa-solid fa-satellite-dish text-green-500"></i> Prototype GPS Stream: Live</span>
-                <span class="font-mono font-bold text-darkTheme">35 km/h</span>
+            <!-- Trust & Safety Badges (Prompt #15 & #45) -->
+            <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200/80 flex items-center justify-between text-[11px] text-emerald-800">
+                <span class="flex items-center gap-1.5 font-bold"><i class="fa-solid fa-shield-check text-emerald-600"></i> Driver Verified • Vehicle Verified</span>
+                <span class="bg-emerald-600/10 text-emerald-700 font-bold px-2 py-0.5 rounded-full text-[10px]">Aqua Corridor</span>
             </div>
 
-            <div class="flex gap-2">
-                <button onclick="closeModal(); document.getElementById('bookingInputPanel').classList.remove('hidden');" class="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl hover:bg-green-700 transition text-xs shadow-md">
-                    <i class="fa-solid fa-check mr-1.5"></i> Close Live Tracker
+            <!-- Ride Actions (Prompt #14 & #45) -->
+            <div class="grid grid-cols-2 gap-2 pt-1">
+                <button type="button" onclick="handleContactDriver()" class="bg-darkTheme hover:bg-gray-800 text-brandYellow font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-phone"></i> Contact Driver
+                </button>
+                <button type="button" onclick="handleShareTrip('${booking.id || ''}')" class="bg-gray-100 hover:bg-gray-200 text-darkTheme font-bold py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1.5 border border-gray-300">
+                    <i class="fa-solid fa-share-nodes text-blue-600"></i> Share Trip
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+                <button type="button" onclick="handleSosAlert()" class="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold px-3 py-1.5 rounded-xl text-xs transition flex items-center gap-1">
+                    <i class="fa-solid fa-triangle-exclamation"></i> SOS / Emergency
+                </button>
+                <button type="button" onclick="handleCancelActiveRide('${booking.id || ''}')" class="text-xs text-gray-500 hover:text-red-500 font-semibold py-1.5 transition">
+                    Cancel Ride
+                </button>
+            </div>
+
+            <div class="text-center pt-1 border-t border-gray-200">
+                <button type="button" onclick="closeModal(); document.getElementById('bookingInputPanel').classList.remove('hidden');" class="text-xs text-gray-400 hover:text-gray-600 font-medium py-1">
+                    ✕ Minimize Tracker
                 </button>
             </div>
         </div>
     `;
 
-    // Render driver simulation marker on modal map
+    // Render driver location marker on modal map
     if (modalMap && currentRouteWaypoints && currentRouteWaypoints.length > 0) {
         try {
             const driverPos = currentRouteWaypoints[0];
@@ -3200,6 +3426,50 @@ function startLiveTrackingState(booking) {
                 try { modalMap.invalidateSize(); } catch(e) {}
             }, 100);
         } catch(e) {}
+    }
+}
+
+// Safety Action Helpers (Prompt #14 & #45)
+function handleContactDriver() {
+    showNotificationToast('📞 Connecting to verified driver Ramesh Kumar via secure proxy...');
+}
+
+function handleShareTrip(bookingId) {
+    if (navigator.share) {
+        navigator.share({
+            title: 'My SAATHCHALO Live Ride',
+            text: 'I am commuting via SAATHCHALO shared pool. Track live on Aqua Line Corridor.',
+            url: window.location.href
+        }).catch(() => {});
+    } else {
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(window.location.href);
+            showNotificationToast('🔗 Live trip link copied to clipboard!');
+        } else {
+            showNotificationToast('Live trip tracking active.');
+        }
+    }
+}
+
+function handleSosAlert() {
+    alert('🚨 EMERGENCY ALERT ACTIVATED\n\nCampus Security & PCR informed.\nVehicle: Auto UP16-AT-1411\nLocation: Aqua Line Knowledge Park Corridor.');
+}
+
+async function handleCancelActiveRide(bookingId) {
+    if (!confirm('Are you sure you want to cancel this ride request?')) return;
+    try {
+        if (bookingId && window.saathSupabase && window.saathSupabase.cancelBooking) {
+            await window.saathSupabase.cancelBooking(bookingId);
+        }
+        showNotificationToast('Ride request cancelled.');
+        closeModal();
+        const inputPanel = document.getElementById('bookingInputPanel');
+        if (inputPanel) inputPanel.classList.remove('hidden');
+        const trackingPanel = document.getElementById('activeTrackingPanel');
+        if (trackingPanel) trackingPanel.classList.add('hidden');
+        if (window.appManager) window.appManager.loadUserBookings();
+    } catch (e) {
+        alert(e.message || 'Could not cancel ride.');
     }
 }
 

@@ -146,6 +146,10 @@ class SaathLiveService {
             this.sse = new EventSource(sseUrl);
 
             this.sse.onopen = () => {
+                if (this.disconnectDebounceTimer) {
+                    clearTimeout(this.disconnectDebounceTimer);
+                    this.disconnectDebounceTimer = null;
+                }
                 const hadDisconnected = this.reconnectAttempts > 0;
                 this.reconnectAttempts = 0;
                 
@@ -154,12 +158,14 @@ class SaathLiveService {
                 const text = document.getElementById('saathConnectionText');
 
                 if (pill && text && hadDisconnected) {
-                    pill.className = 'fixed bottom-6 right-6 z-[9999] px-4 py-2 rounded-2xl text-xs font-bold shadow-2xl transition-all duration-300 flex items-center gap-2 pointer-events-auto border backdrop-blur-md bg-darkTheme/95 text-emerald-400 border-emerald-500/60';
-                    if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
-                    text.innerText = '✓ Connected (Live)';
+                    pill.className = 'fixed top-24 right-6 z-[9999] px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xl transition-all duration-300 flex items-center gap-2 pointer-events-auto border backdrop-blur-md bg-darkTheme/95 text-emerald-400 border-emerald-500/60';
+                    if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+                    text.innerText = '✓ Live Sync Active';
                     setTimeout(() => {
                         pill.classList.add('hidden');
-                    }, 2800);
+                    }, 1800);
+                } else if (pill) {
+                    pill.classList.add('hidden');
                 }
 
                 // If reconnecting, re-fetch authoritative state from server so nothing is missed
@@ -178,15 +184,20 @@ class SaathLiveService {
             };
 
             this.sse.onerror = () => {
-                const pill = document.getElementById('saathConnectionStatusPill');
-                const dot = document.getElementById('saathConnectionDot');
-                const text = document.getElementById('saathConnectionText');
+                // Debounce disconnection status indicator: only display if disconnected for > 4.5 seconds (Prompt #7)
+                if (!this.disconnectDebounceTimer) {
+                    this.disconnectDebounceTimer = setTimeout(() => {
+                        const pill = document.getElementById('saathConnectionStatusPill');
+                        const dot = document.getElementById('saathConnectionDot');
+                        const text = document.getElementById('saathConnectionText');
 
-                if (pill && text) {
-                    pill.className = 'fixed bottom-6 right-6 z-[9999] px-4 py-2 rounded-2xl text-xs font-bold shadow-2xl transition-all duration-300 flex items-center gap-2 pointer-events-auto border backdrop-blur-md bg-darkTheme/95 text-brandYellow border-brandYellow/60 animate-pulse';
-                    if (dot) dot.className = 'w-2.5 h-2.5 rounded-full bg-brandYellow';
-                    text.innerText = 'Reconnecting to live sync...';
-                    pill.classList.remove('hidden');
+                        if (pill && text) {
+                            pill.className = 'fixed top-24 right-6 z-[9999] px-3.5 py-1.5 rounded-full text-xs font-bold shadow-xl transition-all duration-300 flex items-center gap-2 pointer-events-auto border backdrop-blur-md bg-darkTheme/95 text-brandYellow border-brandYellow/60 animate-pulse';
+                            if (dot) dot.className = 'w-2 h-2 rounded-full bg-brandYellow';
+                            text.innerText = 'Reconnecting to live sync...';
+                            pill.classList.remove('hidden');
+                        }
+                    }, 4500);
                 }
 
                 if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
@@ -337,6 +348,31 @@ class SaathLiveService {
         } else if (type === 'ATTENDANCE_FINALIZED') {
             if (typeof window.handleAttendanceFinalized === 'function') {
                 window.handleAttendanceFinalized(payload);
+            }
+        } else if (type === 'VOTE_CANCELLED') {
+            if (this.currentUser && payload.userId === this.currentUser.id) {
+                if (typeof window.resetPersonalVoteState === 'function') {
+                    window.resetPersonalVoteState(payload.sessionId);
+                }
+            }
+            if (typeof appManager !== 'undefined' && typeof appManager.refreshVoting === 'function') {
+                appManager.refreshVoting();
+            }
+        } else if (type === 'DRIVER_LOCATION_UPDATED') {
+            if (typeof window.handleDriverLocationUpdate === 'function') {
+                window.handleDriverLocationUpdate(payload);
+            }
+        } else if (type === 'DRIVER_STATUS_UPDATED') {
+            if (typeof window.handleDriverStatusUpdate === 'function') {
+                window.handleDriverStatusUpdate(payload);
+            }
+        } else if (type === 'STOP_UPDATED') {
+            if (typeof window.handleStopUpdate === 'function') {
+                window.handleStopUpdate(payload);
+            }
+        } else if (type === 'RIDE_STARTED' || type === 'RIDE_COMPLETED') {
+            if (typeof window.handleRideStateUpdate === 'function') {
+                window.handleRideStateUpdate(payload);
             }
         }
     }
@@ -989,6 +1025,78 @@ class SaathLiveService {
 
     subscribeToVehicles(onVehicleUpdate) {
         if (typeof onVehicleUpdate === 'function') this.vehicleListeners.push(onVehicleUpdate);
+    }
+
+    // ----------------------------------------------------
+    // COMMUNITY VOTE CANCELLATION (Prompt #28)
+    // ----------------------------------------------------
+    async cancelVote(sessionId, communityId) {
+        if (!this.currentUser || !this.token) {
+            throw new Error('Authentication required.');
+        }
+        return await this.safeFetchJson(`/api/community/${communityId || 'knowledge-park'}/vote/cancel`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${this.token}`
+            },
+            body: JSON.stringify({ sessionId, userId: this.currentUser.id })
+        });
+    }
+
+    // ----------------------------------------------------
+    // DRIVER PLATFORM APIs (Prompts #31-#43)
+    // ----------------------------------------------------
+    async getDriverMe() {
+        return await this.safeFetchJson('/api/driver/me', {
+            headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {}
+        });
+    }
+
+    async setDriverStatus(status) {
+        return await this.safeFetchJson('/api/driver/status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {})
+            },
+            body: JSON.stringify({ status })
+        });
+    }
+
+    async getDriverCurrentRide() {
+        return await this.safeFetchJson('/api/driver/current-ride', {
+            headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {}
+        });
+    }
+
+    async sendDriverAction(rideId, action, extra = {}) {
+        return await this.safeFetchJson(`/api/driver/ride/${rideId}/action`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {})
+            },
+            body: JSON.stringify({ action, ...extra })
+        });
+    }
+
+    async sendDriverLocation(latitude, longitude, heading = 0, speed = 0, rideId = null, driverId = null) {
+        return await this.safeFetchJson('/api/driver/location', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {})
+            },
+            body: JSON.stringify({
+                latitude,
+                longitude,
+                heading,
+                speed,
+                rideId,
+                driverId: driverId || (this.currentUser ? this.currentUser.driver_id || this.currentUser.id : null)
+            })
+        });
     }
 
     unsubscribeAll() {
