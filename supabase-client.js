@@ -73,7 +73,7 @@ class SaathLiveService {
         const host = window.location.host || '';
         // If opened on GitHub Pages, file://, or non-backend dev port (5500, 3000), route to live tunnel
         if (origin.startsWith('file:') || origin === 'null' || host.includes('github.io') || host.includes(':5500') || host.includes(':3000')) {
-            return 'https://montreal-displayed-casio-europe.trycloudflare.com';
+            return 'https://direction-billy-voting-trends.trycloudflare.com';
         }
         return origin;
     }
