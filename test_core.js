@@ -59,16 +59,19 @@ if (alloc1.type === 'AUTO' && alloc2.type === 'SHUTTLE' && alloc3.type === 'BUS'
     console.error('FAIL on vehicle allocation');
 }
 
-console.log('\n=== TEST 3: ₹50 NO-SHOW FINE APPLICATION ===');
-store.applyFine(50);
-console.log('Pending Fine after violation:', store.getUser().pendingFine);
-if (store.getUser().pendingFine === 50) {
-    console.log('✓ PASS: ₹50 fine correctly recorded in user profile!');
+console.log('\n=== TEST 3: REWARD-POINT RELIABILITY & NO-SHOW PENALTY (-5 PTS) ===');
+console.log('Initial Reward Points:', store.getRewardPoints());
+if (store.getRewardPoints() === 100) {
+    console.log('✓ PASS: Baseline reward points initialized to 100!');
 }
-store.clearFine();
-console.log('Pending Fine after demo clear:', store.getUser().pendingFine);
-if (store.getUser().pendingFine === 0) {
-    console.log('✓ PASS: Demo fine cleared successfully!');
+store.applyRewardPenalty(5);
+console.log('Reward Points after violation (-5 pts):', store.getRewardPoints());
+if (store.getRewardPoints() === 95) {
+    console.log('✓ PASS: Exactly 5 reward points deducted for confirmed ride violation!');
+}
+console.log('Reliability Status:', store.getRewardStatus());
+if (store.getRewardStatus() === 'Good standing') {
+    console.log('✓ PASS: Reliability standing reflects Good standing at 95 points!');
 }
 
 console.log('\n=== TEST 4: PRIORITY SYSTEM ===');

@@ -48,6 +48,7 @@
     <script src="/env.js?v=2.4.0"></script>
     <script src="supabase-client.js?v=2.4.0"></script>
     <script src="pricing.config.js?v=2.4.0"></script>
+    <script src="reward.config.js?v=2.4.0"></script>
     <script>
         // Google Maps JavaScript API dynamic loader
         window.initGoogleMapsServices = function() {
@@ -88,6 +89,7 @@
                     <a href="#live-community" class="text-gray-300 hover:text-brandYellow font-medium transition-colors flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>Live Community</a>
                     <a href="#live-map" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">Live Map</a>
                     <a href="#my-rides" class="text-gray-300 hover:text-brandYellow font-medium transition-colors">My Rides</a>
+                    <a href="javascript:void(0)" onclick="openRewardsModal()" class="text-gray-300 hover:text-brandYellow font-medium transition-colors flex items-center gap-1.5"><i class="fa-solid fa-coins text-brandYellow text-xs"></i>My Rewards</a>
                 </div>
 
                 <!-- Right Action / User Profile Area -->
@@ -104,10 +106,12 @@
 
                     <!-- State B: Logged In Navigation -->
                     <div id="loggedInNav" class="hidden flex items-center gap-3">
-                        <!-- Fine Badge (if any) -->
-                        <span id="navFineBadge" class="hidden bg-red-600/90 text-white text-[11px] font-bold px-2.5 py-1 rounded-full animate-bounce">
-                            Fine: ₹50
-                        </span>
+                        <!-- Reward Points Reliability Badge (Section 5, 14, 16) -->
+                        <button onclick="openRewardsModal()" id="navRewardsBadge" class="flex items-center gap-1.5 bg-brandYellow/15 hover:bg-brandYellow/25 border border-brandYellow/40 text-brandYellow text-xs font-bold px-3 py-1.5 rounded-full transition shadow-sm" title="View SAATHCHALO Reward Points & Reliability Status">
+                            <i class="fa-solid fa-coins text-brandYellow"></i>
+                            <span id="navRewardPoints">100</span>
+                            <span class="text-[10px] text-gray-400 font-normal hidden sm:inline">pts</span>
+                        </button>
 
                         <!-- Profile Trigger Button -->
                         <button onclick="openProfileModal()" class="flex items-center gap-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 p-1.5 pr-3.5 rounded-full transition shadow-sm group">
@@ -141,6 +145,10 @@
             <a href="#live-community" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>Live Community</a>
             <a href="#live-map" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">Live Map</a>
             <a href="#my-rides" onclick="document.getElementById('mobileMenu').classList.add('hidden')" class="block py-2 text-gray-200 font-semibold text-sm border-b border-gray-800">My Rides</a>
+            <a href="javascript:void(0)" onclick="document.getElementById('mobileMenu').classList.add('hidden'); openRewardsModal();" class="block py-2 text-brandYellow font-semibold text-sm border-b border-gray-800 flex items-center justify-between">
+                <span><i class="fa-solid fa-coins mr-2"></i>My Rewards</span>
+                <span id="mobileRewardPoints" class="bg-brandYellow/20 text-brandYellow text-xs font-bold px-2 py-0.5 rounded-full">100 pts</span>
+            </a>
             <div class="pt-2 flex gap-2">
                 <button onclick="document.getElementById('mobileMenu').classList.add('hidden'); openLoginModal();" class="flex-1 bg-gray-800 text-gray-200 font-bold py-2 rounded-xl text-xs">Log In</button>
                 <button onclick="document.getElementById('mobileMenu').classList.add('hidden'); openRegisterModal();" class="flex-1 bg-brandYellow text-darkTheme font-bold py-2 rounded-xl text-xs">Register</button>
@@ -485,6 +493,7 @@
                     <div class="flex items-baseline gap-2">
                         <h3 id="statActiveRiders" class="text-4xl font-black text-white">0</h3>
                         <span class="text-xs text-blue-400 font-bold">in transit</span>
+                        <span id="statRidesOrganizing" class="hidden">0</span>
                     </div>
                     <p class="text-[11px] text-gray-400 mt-2">Commuters in confirmed shared rides</p>
                 </div>
@@ -919,27 +928,35 @@
     </div>
 
     <!-- ========================================== -->
-    <!-- MODAL: ₹50 NO-SHOW WARNING MODAL           -->
+    <!-- MODAL: REWARD-POINT VOTE CONFIRMATION MODAL -->
     <!-- ========================================== -->
     <div id="voteConfirmModal" class="fixed inset-0 z-50 hidden bg-darkTheme/85 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 border-2 border-brandYellow text-darkTheme animate-in fade-in zoom-in duration-200">
             <div class="w-14 h-14 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto text-2xl mb-4">
-                <i class="fa-solid fa-triangle-exclamation"></i>
+                <i class="fa-solid fa-coins text-brandYellow"></i>
             </div>
             
-            <h3 class="text-xl font-bold text-center mb-1 text-darkTheme">Confirm your vote</h3>
+            <h3 class="text-xl font-black text-center mb-1 text-darkTheme tracking-tight">CONFIRM YOUR VOTE</h3>
             
             <div class="text-center my-3">
                 <span class="text-xs text-gray-500 block uppercase tracking-wider font-semibold">Destination:</span>
                 <span id="voteTargetDestination" class="text-base font-extrabold text-darkTheme bg-brandYellow/20 px-3 py-1 rounded-lg inline-block mt-0.5">Pari Chowk</span>
             </div>
 
-            <p class="text-xs text-gray-600 text-center mb-4 leading-relaxed">
-                Your vote will be used to help organize shared transportation for the community.
+            <p class="text-xs text-gray-600 text-center mb-3 leading-relaxed">
+                Your vote may be used to organize a shared community ride.
             </p>
 
-            <div class="bg-yellow-50 border border-brandYellow rounded-2xl p-4 mb-6 text-xs text-gray-700 leading-relaxed">
-                If you confirm participation in the arranged ride and later fail to participate or cancel after the applicable cutoff, a <strong>₹50 no-show/cancellation consequence</strong> may apply.
+            <div class="bg-amber-50/90 border border-brandYellow/60 rounded-2xl p-4 mb-6 text-xs text-gray-800 leading-relaxed space-y-1.5">
+                <p class="font-bold text-gray-900 flex items-center gap-1.5">
+                    <i class="fa-solid fa-shield-halved text-brandYellow"></i> Community Reliability Policy
+                </p>
+                <p>
+                    If you confirm participation in the resulting ride and do not show up, <strong>5 reward points</strong> may be deducted from your SAATHCHALO reliability balance.
+                </p>
+                <p class="text-[11px] text-gray-600">
+                    Showing up or timely cancellation results in 0 point deduction. Keep your balance healthy to unlock upcoming commuter benefits.
+                </p>
             </div>
 
             <div class="flex gap-3">
@@ -1130,9 +1147,18 @@
                     </p>
                 </div>
 
-                <!-- Fine Standing Display -->
-                <div id="profileFineDisplay">
-                    <!-- Populated by renderUserProfileUI() -->
+                <!-- Reward Points Standing Display (Section 5, 14, 36, 37) -->
+                <div id="profileRewardDisplay" class="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-gray-500 block">Reward Points Balance</span>
+                            <span id="profileRewardPointsText" class="text-lg font-black text-darkTheme">100 Points</span>
+                            <span id="profileRewardStatusText" class="block text-[11px] text-emerald-600 font-semibold">Good standing</span>
+                        </div>
+                        <button onclick="closeProfileModal(); openRewardsModal();" class="px-3 py-1.5 bg-brandYellow hover:bg-yellow-400 text-darkTheme text-xs font-bold rounded-xl transition shadow-sm">
+                            <i class="fa-solid fa-coins mr-1"></i> My Rewards
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1256,8 +1282,8 @@
                     <p>Community chat is intended for route coordination, finding travel companions, and sharing transit updates. Harassment, hate speech, spam, and unsolicited commercial activity will lead to immediate account suspension.</p>
                 </div>
                 <div>
-                    <h4 class="font-bold text-white text-sm mb-1">2. ₹50 No-Show Policy on Confirmed Votes</h4>
-                    <p>Community destination voting coordinates shared vehicles for groups of riders. If you vote, confirm participation in an arranged shared ride, and subsequently fail to show up without timely cancellation, a <strong>₹50 cancellation fine</strong> applies to protect vehicle drivers and fellow commuters from empty reserved seats.</p>
+                    <h4 class="font-bold text-white text-sm mb-1">2. Reward Points & Reliability Policy on Confirmed Rides</h4>
+                    <p>Community destination voting coordinates shared vehicles for groups of riders. If you vote, confirm participation in an arranged shared ride, and subsequently fail to show up without timely cancellation, <strong>5 reward points</strong> may be deducted from your SAATHCHALO reliability balance to protect vehicle drivers and fellow commuters from empty reserved seats. Showing up or cancelling before the cutoff incurs 0 deduction, and maintaining a healthy balance unlocks future perks.</p>
                 </div>
                 <div>
                     <h4 class="font-bold text-white text-sm mb-1">3. Content Moderation & Reporting</h4>
@@ -1268,6 +1294,84 @@
             <div class="mt-6 pt-5 border-t border-gray-800 text-right">
                 <button onclick="closeTermsModal()" class="bg-brandYellow text-darkTheme font-bold px-6 py-2.5 rounded-xl text-xs hover:bg-yellow-400 transition">
                     Accept & Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: MY REWARDS & RELIABILITY DASHBOARD  -->
+    <!-- (Sections 14, 15, 43, 81)                   -->
+    <!-- ========================================== -->
+    <div id="myRewardsModal" class="fixed inset-0 z-50 hidden bg-darkTheme/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-darkTheme border border-gray-800 rounded-3xl shadow-2xl w-full max-w-lg p-6 sm:p-8 text-white relative animate-in fade-in zoom-in duration-200">
+            <div class="flex justify-between items-center pb-4 border-b border-gray-800 mb-6">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 rounded-2xl bg-brandYellow/15 text-brandYellow flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-coins"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-black text-white">MY REWARDS</h3>
+                        <p class="text-xs text-gray-400">SAATHCHALO Community Reliability</p>
+                    </div>
+                </div>
+                <button onclick="closeRewardsModal()" class="text-gray-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Reward Points Hero Card -->
+            <div class="bg-gradient-to-br from-gray-900 via-gray-800/90 to-darkTheme border-2 border-brandYellow/30 rounded-2xl p-6 text-center shadow-lg relative overflow-hidden mb-6">
+                <div class="relative z-10">
+                    <span class="text-xs font-bold uppercase tracking-wider text-gray-400 block mb-1">Current Reward Balance</span>
+                    <div class="flex items-baseline justify-center gap-2 mb-2">
+                        <span id="rewardsModalPoints" class="text-5xl font-black text-brandYellow font-mono">100</span>
+                        <span class="text-sm font-bold text-gray-300">Reward Points</span>
+                    </div>
+                    <div class="inline-flex items-center gap-2 bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full">
+                        <i class="fa-solid fa-shield-check"></i>
+                        <span>Community reliability: <strong id="rewardsModalStatus" class="font-extrabold">Good standing</strong></span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-3 max-w-xs mx-auto">Keep your reward balance healthy by showing up for rides you confirm.</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs: History & Benefits -->
+            <div class="flex border-b border-gray-800 mb-4">
+                <button id="tabBtnRewardHistory" onclick="switchRewardsTab('history')" class="flex-1 py-2.5 text-xs font-bold text-brandYellow border-b-2 border-brandYellow transition">
+                    <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Recent Activity
+                </button>
+                <button id="tabBtnRewardBenefits" onclick="switchRewardsTab('benefits')" class="flex-1 py-2.5 text-xs font-bold text-gray-400 hover:text-gray-200 transition">
+                    <i class="fa-solid fa-gift mr-1.5"></i> Available Benefits
+                </button>
+            </div>
+
+            <!-- Tab Content: Reward History -->
+            <div id="tabRewardHistoryContent" class="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                <div id="rewardTransactionsList" class="space-y-2">
+                    <!-- Populated dynamically by renderRewardHistoryUI() -->
+                    <div class="text-center py-6 text-xs text-gray-500">
+                        <i class="fa-solid fa-circle-check text-emerald-400 text-2xl mb-2 block"></i>
+                        <p class="text-gray-300 font-semibold">Reliable Commuter Record</p>
+                        <p class="text-[11px] text-gray-500">No deductions recorded. All confirmed rides honored.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Available Benefits (Configurable Placeholders - Section 13, 40, 43, 81) -->
+            <div id="tabRewardBenefitsContent" class="hidden py-6 text-center text-xs">
+                <div class="w-12 h-12 rounded-2xl bg-gray-800 text-gray-400 flex items-center justify-center mx-auto mb-3 text-xl">
+                    <i class="fa-solid fa-tags"></i>
+                </div>
+                <p class="font-bold text-gray-300 mb-1">Available Benefits</p>
+                <p class="text-[11px] text-gray-500 max-w-xs mx-auto leading-relaxed">
+                    Benefits will appear here as your reward balance qualifies. Maintain reliable participation to unlock future priority access and perks.
+                </p>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-gray-800 text-right">
+                <button onclick="closeRewardsModal()" class="w-full sm:w-auto bg-gray-800 hover:bg-gray-700 text-white font-bold px-6 py-2.5 rounded-xl text-xs transition">
+                    Close
                 </button>
             </div>
         </div>

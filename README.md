@@ -45,7 +45,7 @@
 ### 5. 🗳️ Real-Time Community Hubs & Destination Polls
 - **5 High-Frequency Regional Hubs:** Knowledge Park, Pari Chowk, Alpha 1 & 2, Noida Sector 62, Ghaziabad Terminal.
 - **Real-Time Group Chat:** Instant multi-device messaging with user-generated content (UGC) reporting & moderation.
-- **One Person = One Vote:** Server-enforced idempotent voting with pre-vote ₹50 cancellation policy notice and persistent personal vote state ("✓ You voted").
+- **One Person = One Vote:** Server-enforced idempotent voting with pre-vote reliability & reward policy notice and persistent personal vote state ("✓ You voted").
 
 ### 6. 🛡️ User Privacy & Account Management
 - **In-App Account Deletion:** Permanent account deletion (`DELETE /api/auth/account`) satisfying Google Play Store requirements.

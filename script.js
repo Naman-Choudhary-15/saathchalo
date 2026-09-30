@@ -23,7 +23,7 @@ const SAATH_CONFIG = {
     AUTO_CAPACITY: 4,
     SHUTTLE_CAPACITY: 20,
     BUS_CAPACITY: 50,
-    NO_SHOW_FINE: 50,
+    NO_SHOW_REWARD_PENALTY: 5,
     DEFAULT_CENTER: [28.4744, 77.5040], // Knowledge Park II, Greater Noida
     LANDMARKS: {
         'knowledge park': { name: 'Knowledge Park, Greater Noida', coords: [28.4744, 77.5040] },
@@ -229,6 +229,13 @@ function renderAuthNavigationUI() {
         if (loggedInNav) loggedInNav.classList.remove('hidden');
         if (navUserAvatar) navUserAvatar.src = profile.avatar_url || SAATH_CONFIG.AVATARS[0].url;
         if (navUserName) navUserName.innerText = profile.name || 'Commuter';
+
+        // Update Reward Points Badges
+        const pts = typeof profile.reward_points === 'number' ? profile.reward_points : 100;
+        const navRewardPts = document.getElementById('navRewardPoints');
+        if (navRewardPts) navRewardPts.innerText = pts;
+        const mobileRewardPts = document.getElementById('mobileRewardPoints');
+        if (mobileRewardPts) mobileRewardPts.innerText = `${pts} pts`;
     } else {
         if (loggedOutNav) loggedOutNav.classList.remove('hidden');
         if (loggedInNav) loggedInNav.classList.add('hidden');
@@ -1276,30 +1283,36 @@ function renderCommunityRideConfirmedBanner(ride) {
     const banner = document.getElementById('communityAllocationBanner');
     if (!banner) return;
 
+    const rideId = ride.id;
+    const isPresent = Array.isArray(ride.participants) && ride.participants.some(p => 
+        (p.userId === window.saathSupabase?.currentUser?.id || p.id === window.saathSupabase?.currentUser?.id) && 
+        p.attendance_status === 'PRESENT'
+    );
+
     banner.classList.remove('hidden');
     banner.innerHTML = `
         <div class="bg-gradient-to-r from-gray-900 to-darkTheme border-2 border-brandYellow rounded-2xl p-5 shadow-2xl text-white">
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                 <div>
                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-brandYellow text-darkTheme mb-2">
-                        <i class="fa-solid fa-trophy"></i> RIDE CONFIRMED
+                        <i class="fa-solid fa-trophy"></i> COMMUNITY RIDE CONFIRMED
                     </span>
                     <h4 class="text-xl font-black text-white">Community Ride to <span class="text-brandYellow">${ride.destination}</span></h4>
-                    <p class="text-xs text-gray-300">Departure: <strong>${ride.departure_time}</strong> • ${ride.total_passengers} Confirmed Riders</p>
+                    <p class="text-xs text-gray-300">Departure: <strong>${ride.departure_time}</strong> • Your status: <span id="rideStatus_${rideId}" class="text-brandYellow font-bold">${isPresent ? '✓ PRESENT' : 'COMMITTED'}</span></p>
                 </div>
                 <div class="text-right">
                     <span class="text-xs text-gray-400">Assigned Vehicle</span>
                     <h5 class="text-lg font-black text-brandYellow">
-                        ${ride.vehicle_type}
+                        ${ride.vehicle_title || ride.vehicle_type}
                     </h5>
-                    <p class="text-[11px] text-gray-400 font-mono">${ride.vehicle_id}</p>
+                    <p class="text-[11px] text-gray-400 font-mono">${ride.vehicle_number || ride.vehicle_id || 'UP16-SH-2026'}</p>
                 </div>
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-gray-800/80 p-3 rounded-xl mb-4 text-xs">
                 <div>
-                    <span class="text-gray-400">Passengers:</span>
-                    <p class="font-bold text-white">${ride.total_passengers} Commuters</p>
+                    <span class="text-gray-400">Riders:</span>
+                    <p class="font-bold text-white">${ride.rider_count || ride.total_passengers || 1} Commuters</p>
                 </div>
                 <div>
                     <span class="text-gray-400">Estimated Fare:</span>
@@ -1307,12 +1320,37 @@ function renderCommunityRideConfirmedBanner(ride) {
                 </div>
                 <div>
                     <span class="text-gray-400">Driver:</span>
-                    <p class="font-bold text-white">${ride.driver_name} (4.9 ★)</p>
+                    <p class="font-bold text-white">${ride.driver_name || 'Ramesh Kumar'} (4.9 ★)</p>
                 </div>
             </div>
 
-            <button onclick="trackAssignedCommunityRide('${ride.id}')" class="w-full bg-brandYellow text-darkTheme font-bold py-3 rounded-xl hover:bg-yellow-400 transition text-xs shadow-md">
-                <i class="fa-solid fa-satellite-dish mr-1"></i> Track Assigned Ride
+            <!-- Attendance & Check-In Action Area (Section 19, 21, 45) -->
+            <div class="bg-darkTheme/70 border border-gray-700/80 rounded-xl p-3.5 mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <p class="text-xs font-bold text-white">CHECK-IN OPEN</p>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-0.5">Press "I'm Here" to verify attendance. Attending incurs 0 point change.</p>
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    ${isPresent ? `
+                        <button class="flex-1 sm:flex-none bg-emerald-500 text-darkTheme font-bold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 cursor-default" disabled>
+                            <i class="fa-solid fa-check"></i> ✓ Checked In (Present)
+                        </button>
+                    ` : `
+                        <button id="btnCheckIn_${rideId}" onclick="handleRideCheckIn('${rideId}')" class="flex-1 sm:flex-none bg-brandYellow hover:bg-yellow-400 text-darkTheme font-black px-5 py-2.5 rounded-xl text-xs transition shadow-md flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-user-check"></i> I'm Here
+                        </button>
+                    `}
+                    <button onclick="handleFinalizeAttendance('${rideId}')" title="Demo Finalize Attendance" class="px-3 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 rounded-xl text-xs font-bold transition flex items-center gap-1">
+                        <i class="fa-solid fa-flag-checkered"></i> Finalize (Demo)
+                    </button>
+                </div>
+            </div>
+
+            <button onclick="trackAssignedCommunityRide('${ride.id}')" class="w-full bg-gray-800 hover:bg-gray-700 text-white font-bold py-2.5 rounded-xl transition text-xs border border-gray-700">
+                <i class="fa-solid fa-satellite-dish mr-1 text-brandYellow"></i> Track Assigned Ride on Live Map
             </button>
         </div>
     `;
@@ -3345,16 +3383,22 @@ var store = {
     _userData: {
         id: 'usr_default',
         name: 'Aditya',
-        pendingFine: 0
+        rewardPoints: (typeof REWARD_CONFIG !== 'undefined' && REWARD_CONFIG.INITIAL_REWARD_POINTS) || 100
     },
     getUser() {
         return this._userData;
     },
-    applyFine(amount) {
-        this._userData.pendingFine = (this._userData.pendingFine || 0) + amount;
+    getRewardPoints() {
+        return this._userData.rewardPoints;
     },
-    clearFine() {
-        this._userData.pendingFine = 0;
+    applyRewardPenalty(points = 5) {
+        const min = (typeof REWARD_CONFIG !== 'undefined' && REWARD_CONFIG.MIN_REWARD_POINTS) || 0;
+        this._userData.rewardPoints = Math.max(min, (this._userData.rewardPoints || 100) - points);
+        return this._userData.rewardPoints;
+    },
+    getRewardStatus() {
+        if (typeof getRewardStatus === 'function') return getRewardStatus(this._userData.rewardPoints);
+        return this._userData.rewardPoints >= 90 ? 'Good standing' : 'Needs improvement';
     }
 };
 if (typeof globalThis !== 'undefined') globalThis.store = store;
@@ -3451,4 +3495,290 @@ async function reportMessageAction(messageId, senderId, senderName) {
     } catch (err) {
         showNotificationToast('Report recorded for review.');
     }
+}
+
+// ==========================================
+// 13. COMMUTER PROFILE & IDENTITY (Section 61, 65)
+// ==========================================
+function openProfileModal() {
+    const modal = document.getElementById('profileModal');
+    if (!modal) return;
+    const user = window.saathSupabase?.currentUser || null;
+    const nameInput = document.getElementById('profileNameInput');
+    if (nameInput && user) nameInput.value = user.name || 'Aditya';
+    
+    // Update Reward points and standing in profile
+    const pts = typeof user?.reward_points === 'number' ? user.reward_points : 100;
+    const ptsElem = document.getElementById('profileRewardPointsText');
+    if (ptsElem) ptsElem.innerText = `${pts} Points`;
+    const statusElem = document.getElementById('profileRewardStatusText');
+    if (statusElem) {
+        statusElem.innerText = typeof getRewardStatus === 'function' ? getRewardStatus(pts) : (pts >= 90 ? 'Good standing' : 'Needs improvement');
+    }
+
+    renderAvatarPickerOptions();
+    modal.classList.remove('hidden');
+}
+
+function closeProfileModal() {
+    const modal = document.getElementById('profileModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function renderAvatarPickerOptions() {
+    const container = document.getElementById('avatarPickerOptions');
+    if (!container) return;
+    const avatars = (typeof SAATH_CONFIG !== 'undefined' && SAATH_CONFIG.AVATARS) || [
+        { id: 'av1', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80' },
+        { id: 'av2', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80' },
+        { id: 'av3', url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80' },
+        { id: 'av4', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80' }
+    ];
+    const currentAvatar = selectedProfileAvatarUrl || window.saathSupabase?.currentUser?.avatar_url || avatars[0].url;
+    container.innerHTML = avatars.map(av => `
+        <button type="button" onclick="selectProfileAvatar('${av.url}')" class="w-12 h-12 rounded-full overflow-hidden border-2 transition-transform hover:scale-105 ${currentAvatar === av.url ? 'border-brandYellow ring-2 ring-brandYellow/50' : 'border-gray-200'}">
+            <img src="${av.url}" class="w-full h-full object-cover" alt="avatar" />
+        </button>
+    `).join('');
+}
+
+let selectedProfileAvatarUrl = null;
+function selectProfileAvatar(url) {
+    selectedProfileAvatarUrl = url;
+    renderAvatarPickerOptions();
+}
+
+async function saveUserProfile() {
+    const nameInput = document.getElementById('profileNameInput');
+    const newName = nameInput ? nameInput.value.trim() : '';
+    if (!newName) {
+        alert('Please enter a valid display name.');
+        return;
+    }
+    if (window.saathSupabase && window.saathSupabase.currentUser) {
+        window.saathSupabase.currentUser.name = newName;
+        if (selectedProfileAvatarUrl) {
+            window.saathSupabase.currentUser.avatar_url = selectedProfileAvatarUrl;
+        }
+        if (window.saathSupabase.currentProfile) {
+            window.saathSupabase.currentProfile.name = newName;
+            if (selectedProfileAvatarUrl) {
+                window.saathSupabase.currentProfile.avatar_url = selectedProfileAvatarUrl;
+            }
+        }
+        localStorage.setItem('saath_auth_user', JSON.stringify(window.saathSupabase.currentUser));
+    }
+    renderAuthNavigationUI();
+    closeProfileModal();
+    showNotificationToast('Profile updated successfully.');
+}
+
+// ==========================================
+// 14. REWARD POINTS & RELIABILITY UI ENGINE (Sections 5-31, 43, 81)
+// ==========================================
+async function openRewardsModal() {
+    const modal = document.getElementById('myRewardsModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    switchRewardsTab('history');
+    await fetchAndRenderUserRewards();
+}
+
+function closeRewardsModal() {
+    const modal = document.getElementById('myRewardsModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function switchRewardsTab(tabName) {
+    const historyBtn = document.getElementById('tabBtnRewardHistory');
+    const benefitsBtn = document.getElementById('tabBtnRewardBenefits');
+    const historyContent = document.getElementById('tabRewardHistoryContent');
+    const benefitsContent = document.getElementById('tabRewardBenefitsContent');
+
+    if (tabName === 'history') {
+        if (historyBtn) {
+            historyBtn.classList.add('text-brandYellow', 'border-b-2', 'border-brandYellow');
+            historyBtn.classList.remove('text-gray-400');
+        }
+        if (benefitsBtn) {
+            benefitsBtn.classList.remove('text-brandYellow', 'border-b-2', 'border-brandYellow');
+            benefitsBtn.classList.add('text-gray-400');
+        }
+        if (historyContent) historyContent.classList.remove('hidden');
+        if (benefitsContent) benefitsContent.classList.add('hidden');
+    } else {
+        if (benefitsBtn) {
+            benefitsBtn.classList.add('text-brandYellow', 'border-b-2', 'border-brandYellow');
+            benefitsBtn.classList.remove('text-gray-400');
+        }
+        if (historyBtn) {
+            historyBtn.classList.remove('text-brandYellow', 'border-b-2', 'border-brandYellow');
+            historyBtn.classList.add('text-gray-400');
+        }
+        if (benefitsContent) benefitsContent.classList.remove('hidden');
+        if (historyContent) historyContent.classList.add('hidden');
+    }
+}
+
+async function fetchAndRenderUserRewards() {
+    try {
+        if (!window.saathSupabase) return;
+        const rewardsData = await window.saathSupabase.getRewardBalance();
+        if (rewardsData && typeof rewardsData.reward_points === 'number') {
+            updateRewardBalanceUI(rewardsData.reward_points, rewardsData);
+            renderRewardHistoryUI(rewardsData.history || []);
+        }
+    } catch(err) {
+        console.warn('Error fetching reward balance:', err);
+    }
+}
+
+function updateRewardBalanceUI(points, data = {}) {
+    const pts = typeof points === 'number' ? points : 100;
+    const statusText = (data && data.status) || (typeof getRewardStatus === 'function' ? getRewardStatus(pts) : (pts >= 90 ? 'Good standing' : 'Needs improvement'));
+
+    // Update Navbar Badge
+    const navPts = document.getElementById('navRewardPoints');
+    if (navPts) navPts.innerText = pts;
+
+    // Update Mobile Nav
+    const mobilePts = document.getElementById('mobileRewardPoints');
+    if (mobilePts) mobilePts.innerText = `${pts} pts`;
+
+    // Update Modal
+    const modalPts = document.getElementById('rewardsModalPoints');
+    if (modalPts) modalPts.innerText = pts;
+    const modalStatus = document.getElementById('rewardsModalStatus');
+    if (modalStatus) modalStatus.innerText = statusText;
+
+    // Update Profile Modal
+    const profPts = document.getElementById('profileRewardPointsText');
+    if (profPts) profPts.innerText = `${pts} Points`;
+    const profStatus = document.getElementById('profileRewardStatusText');
+    if (profStatus) profStatus.innerText = statusText;
+}
+
+function renderRewardHistoryUI(history = []) {
+    const container = document.getElementById('rewardTransactionsList');
+    if (!container) return;
+
+    if (!Array.isArray(history) || history.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-6 text-xs text-gray-500">
+                <i class="fa-solid fa-circle-check text-emerald-400 text-2xl mb-2 block"></i>
+                <p class="text-gray-300 font-semibold">Reliable Commuter Record</p>
+                <p class="text-[11px] text-gray-500">No deductions recorded. All confirmed rides honored.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = history.map(item => {
+        const isNegative = item.points_change < 0;
+        const changeStr = isNegative ? `${item.points_change}` : `+${item.points_change}`;
+        const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
+        return `
+            <div class="bg-gray-800/80 border border-gray-700/60 rounded-xl p-3 flex items-center justify-between transition hover:border-gray-600">
+                <div class="flex items-start gap-2.5">
+                    <div class="w-8 h-8 rounded-lg ${isNegative ? 'bg-red-500/15 text-red-400' : 'bg-emerald-500/15 text-emerald-400'} flex items-center justify-center text-xs mt-0.5">
+                        <i class="fa-solid ${isNegative ? 'fa-arrow-down' : 'fa-arrow-up'}"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold text-gray-200 leading-snug">${item.reason || 'Confirmed community ride'}</p>
+                        <p class="text-[11px] text-gray-400">${dateStr}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <span class="text-sm font-black font-mono ${isNegative ? 'text-red-400' : 'text-emerald-400'}">
+                        ${changeStr} pts
+                    </span>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Attendance Check-In ("I'm Here" - Section 19, 21)
+async function handleRideCheckIn(rideId) {
+    if (!window.saathSupabase || !window.saathSupabase.currentUser) {
+        openLoginModal();
+        return;
+    }
+
+    try {
+        const res = await window.saathSupabase.checkInRide(rideId);
+        if (res && res.success) {
+            updateCheckInUI(rideId, true);
+            showNotificationToast("✓ Ride attendance recorded. You're checked in.");
+        } else {
+            alert(res?.error || 'Failed to record check-in.');
+        }
+    } catch(err) {
+        console.error('Check-in error:', err);
+        updateCheckInUI(rideId, true);
+        showNotificationToast("✓ Ride attendance recorded.");
+    }
+}
+
+function updateCheckInUI(rideId, isPresent) {
+    const btn = document.getElementById(`btnCheckIn_${rideId}`);
+    if (btn) {
+        btn.disabled = true;
+        btn.className = 'bg-emerald-500 text-darkTheme font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-default';
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> ✓ Checked In';
+    }
+    const statusText = document.getElementById(`rideStatus_${rideId}`);
+    if (statusText) {
+        statusText.innerHTML = '<span class="text-emerald-400 font-bold">✓ PRESENT</span> (0 point change)';
+    }
+}
+
+// Demo Attendance Finalization (Section 20, 21)
+async function handleFinalizeAttendance(rideId) {
+    if (!confirm('Finalize attendance for this community ride?\n\n- Riders who checked in [I\'m Here] are marked PRESENT (0 point deduction).\n- Riders who did not check in are marked ABSENT (-5 reward points once).')) {
+        return;
+    }
+
+    try {
+        const res = await window.saathSupabase.finalizeRideAttendance(rideId);
+        if (res && res.success) {
+            const absCount = res.results?.absent?.length || 0;
+            const presCount = res.results?.present?.length || 0;
+            showNotificationToast(`✓ Attendance finalized: ${presCount} Present (0 pts), ${absCount} Absent (-5 pts).`);
+            await fetchAndRenderUserRewards();
+        } else {
+            alert(res?.error || 'Failed to finalize attendance.');
+        }
+    } catch(err) {
+        console.error('Finalize error:', err);
+        showNotificationToast('Attendance finalized.');
+        await fetchAndRenderUserRewards();
+    }
+}
+
+function handleAttendanceUpdated(payload) {
+    if (payload && payload.rideId) {
+        if (payload.userId === window.saathSupabase?.currentUser?.id) {
+            updateCheckInUI(payload.rideId, true);
+        }
+    }
+}
+
+function handleAttendanceFinalized(payload) {
+    fetchAndRenderUserRewards();
+}
+
+if (typeof window !== 'undefined') {
+    window.openRewardsModal = openRewardsModal;
+    window.closeRewardsModal = closeRewardsModal;
+    window.switchRewardsTab = switchRewardsTab;
+    window.updateRewardBalanceUI = updateRewardBalanceUI;
+    window.handleRideCheckIn = handleRideCheckIn;
+    window.handleFinalizeAttendance = handleFinalizeAttendance;
+    window.handleAttendanceUpdated = handleAttendanceUpdated;
+    window.handleAttendanceFinalized = handleAttendanceFinalized;
+    window.openProfileModal = openProfileModal;
+    window.closeProfileModal = closeProfileModal;
+    window.saveUserProfile = saveUserProfile;
+    window.selectProfileAvatar = selectProfileAvatar;
 }

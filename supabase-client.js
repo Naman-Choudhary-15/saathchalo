@@ -305,6 +305,39 @@ class SaathLiveService {
             if (window.handleRealtimeVehicleUpdate) {
                 window.handleRealtimeVehicleUpdate(payload);
             }
+        } else if (type === 'REWARD_UPDATED') {
+            if (this.currentUser && payload.userId === this.currentUser.id) {
+                this.currentUser.reward_points = payload.currentPoints;
+                if (this.currentProfile) this.currentProfile.reward_points = payload.currentPoints;
+                if (typeof localStorage !== 'undefined') {
+                    const stored = localStorage.getItem('saath_auth_user');
+                    if (stored) {
+                        try {
+                            const u = JSON.parse(stored);
+                            u.reward_points = payload.currentPoints;
+                            localStorage.setItem('saath_auth_user', JSON.stringify(u));
+                        } catch(e) {}
+                    }
+                }
+                if (typeof window.updateRewardBalanceUI === 'function') {
+                    window.updateRewardBalanceUI(payload.currentPoints, payload);
+                }
+                if (typeof window.showNotificationToast === 'function') {
+                    if (payload.pointsChange < 0) {
+                        window.showNotificationToast(`${Math.abs(payload.pointsChange)} reward points were deducted because you did not attend a confirmed community ride.`);
+                    } else if (payload.pointsChange > 0) {
+                        window.showNotificationToast(`+${payload.pointsChange} reward points added to your balance!`);
+                    }
+                }
+            }
+        } else if (type === 'ATTENDANCE_UPDATED') {
+            if (typeof window.handleAttendanceUpdated === 'function') {
+                window.handleAttendanceUpdated(payload);
+            }
+        } else if (type === 'ATTENDANCE_FINALIZED') {
+            if (typeof window.handleAttendanceFinalized === 'function') {
+                window.handleAttendanceFinalized(payload);
+            }
         }
     }
 
@@ -709,12 +742,69 @@ class SaathLiveService {
     }
 
     async getRideDetails(rideId) {
+        try {
+            const data = await this.safeFetchJson(`/api/rides/${rideId}`);
+            if (data && data.id) return data;
+        } catch(e) {}
         return {
             id: rideId,
             vehicle_type: 'Shared Auto',
             vehicle_id: 'Auto UP16-AB-1411',
             destination: 'Pari Chowk'
         };
+    }
+
+    // ==========================================
+    // REWARD POINTS & RELIABILITY SYSTEM (Sections 5-31, 66)
+    // ==========================================
+    async getRewardBalance() {
+        const headers = {};
+        if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+        const userIdParam = this.currentUser ? `?userId=${encodeURIComponent(this.currentUser.id)}` : '';
+        return await this.safeFetchJson(`/api/users/me/rewards${userIdParam}`, { headers });
+    }
+
+    async getRewardHistory() {
+        const headers = {};
+        if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+        const userIdParam = this.currentUser ? `?userId=${encodeURIComponent(this.currentUser.id)}` : '';
+        return await this.safeFetchJson(`/api/users/me/rewards/history${userIdParam}`, { headers });
+    }
+
+    async checkInRide(rideId) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+        return await this.safeFetchJson(`/api/rides/${rideId}/check-in`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ userId: this.currentUser?.id })
+        });
+    }
+
+    async getRideAttendance(rideId) {
+        return await this.safeFetchJson(`/api/rides/${rideId}/attendance`);
+    }
+
+    async finalizeRideAttendance(rideId) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+        return await this.safeFetchJson(`/api/rides/${rideId}/finalize-attendance`, {
+            method: 'POST',
+            headers
+        });
+    }
+
+    async cancelRideBooking(rideId, isLateCancellation = false) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+        return await this.safeFetchJson(`/api/rides/${rideId}/cancel`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                userId: this.currentUser?.id,
+                isLateCancellation
+            })
+        });
     }
 
     // ==========================================

@@ -11,6 +11,17 @@ const {
     calculateVehicleFare, 
     allocateVehicleForCount 
 } = require('./pricing.config.js');
+const {
+    REWARD_CONFIG,
+    INITIAL_REWARD_POINTS,
+    NO_SHOW_REWARD_PENALTY,
+    MIN_REWARD_POINTS,
+    CANCELLATION_CUTOFF_MINUTES,
+    ATTENDANCE_STATES,
+    REWARD_TIERS,
+    getRewardBenefits,
+    getRewardStatus
+} = require('./reward.config.js');
 
 // Load environment variables from .env
 function loadEnv() {
@@ -173,6 +184,7 @@ function getDefaultDb() {
         votes: [], // ZERO demo votes! Real user votes only!
         rides: [],
         ride_participants: [],
+        reward_transactions: [],
         shuttles: [
             { id: 'SH-01', route: 'Knowledge Park → Pari Chowk', departure_time: '08:30 AM', arrival_time: '08:50 AM', capacity: 20, available_seats: 18, status: 'Available', fare: 20 },
             { id: 'SH-02', route: 'Knowledge Park → Noida Sector 62', departure_time: '09:00 AM', arrival_time: '09:50 AM', capacity: 20, available_seats: 0, status: 'Full', fare: 45 },
@@ -217,11 +229,15 @@ function loadDb() {
                 if (!Array.isArray(db.bookings)) db.bookings = [];
                 if (!Array.isArray(db.rides)) db.rides = [];
                 if (!Array.isArray(db.ride_participants)) db.ride_participants = [];
+                if (!Array.isArray(db.reward_transactions)) db.reward_transactions = [];
                 if (!Array.isArray(db.shuttles)) db.shuttles = getDefaultDb().shuttles;
 
                 for (const u of db.users) {
                     if (!u.email) u.email = 'guest_' + u.id + '@guest.saathchalo.in';
                     if (!u.joined_communities) u.joined_communities = ['knowledge-park'];
+                    if (typeof u.reward_points !== 'number') {
+                        u.reward_points = INITIAL_REWARD_POINTS;
+                    }
                 }
 
                 if (!Array.isArray(db.voteSessions) || db.voteSessions.length < 5) {
@@ -521,6 +537,86 @@ function broadcastEvent(type, payload) {
     }
 }
 
+// Centralized Idempotent Reward Deduction Service (Section 28)
+function applyNoShowRewardDeduction(userId, rideId, reason = 'Confirmed community ride not attended') {
+    const database = loadDb();
+    const user = database.users.find(u => u.id === userId);
+    if (!user) {
+        return { error: 'User not found', success: false };
+    }
+
+    if (!Array.isArray(database.reward_transactions)) {
+        database.reward_transactions = [];
+    }
+
+    // 4. Verify no prior deduction exists for this user and ride (Idempotency)
+    const existingTx = database.reward_transactions.find(t => 
+        t.user_id === userId && t.ride_id === rideId && t.type === 'NO_SHOW'
+    );
+    if (existingTx) {
+        return {
+            success: true,
+            idempotent: true,
+            user_id: userId,
+            reward_points: user.reward_points ?? INITIAL_REWARD_POINTS,
+            transaction: existingTx,
+            message: 'Point deduction already recorded for this ride.'
+        };
+    }
+
+    // 1 & 3: Ensure participant status is ABSENT
+    if (Array.isArray(database.ride_participants)) {
+        const part = database.ride_participants.find(p => p.ride_id === rideId && p.user_id === userId);
+        if (part) {
+            part.attendance_status = 'ABSENT';
+            if (!part.absence_finalized_at) {
+                part.absence_finalized_at = new Date().toISOString();
+            }
+        }
+    }
+
+    // 6. Reduce reward balance by NO_SHOW_REWARD_PENALTY (5)
+    const currentPoints = typeof user.reward_points === 'number' ? user.reward_points : INITIAL_REWARD_POINTS;
+    const penalty = NO_SHOW_REWARD_PENALTY; // 5
+    const floor = MIN_REWARD_POINTS; // 0
+    const newPoints = Math.max(floor, currentPoints - penalty);
+    user.reward_points = newPoints;
+
+    // 5 & 7: Create reward transaction
+    const tx = {
+        id: 'rtx_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex'),
+        user_id: userId,
+        ride_id: rideId,
+        type: 'NO_SHOW',
+        points_change: -penalty,
+        reason: reason,
+        created_at: new Date().toISOString()
+    };
+    database.reward_transactions.push(tx);
+    saveDb();
+
+    // 8. Emit realtime reward update
+    broadcastEvent('REWARD_UPDATED', {
+        userId: user.id,
+        previousPoints: currentPoints,
+        currentPoints: newPoints,
+        pointsChange: -penalty,
+        reason: tx.reason,
+        rideId: rideId,
+        timestamp: tx.created_at
+    });
+
+    // 9. Return updated balance
+    return {
+        success: true,
+        user_id: userId,
+        reward_points: newPoints,
+        previous_points: currentPoints,
+        points_change: -penalty,
+        transaction: tx
+    };
+}
+
 function parseJsonBody(req) {
     return new Promise((resolve, reject) => {
         let body = '';
@@ -649,6 +745,7 @@ const server = http.createServer(async (req, res) => {
                 primary_area: area || 'Knowledge Park',
                 joined_communities: [initialCommunity],
                 token: token,
+                reward_points: INITIAL_REWARD_POINTS,
                 created_at: new Date().toISOString()
             };
 
@@ -669,7 +766,8 @@ const server = http.createServer(async (req, res) => {
                     name: newUser.name,
                     avatar_url: newUser.avatar_url,
                     primary_area: newUser.primary_area,
-                    joined_communities: newUser.joined_communities
+                    joined_communities: newUser.joined_communities,
+                    reward_points: newUser.reward_points
                 },
                 token: token
             });
@@ -701,6 +799,9 @@ const server = http.createServer(async (req, res) => {
             if (!Array.isArray(user.joined_communities)) {
                 user.joined_communities = ['knowledge-park'];
             }
+            if (typeof user.reward_points !== 'number') {
+                user.reward_points = INITIAL_REWARD_POINTS;
+            }
 
             // Refresh token
             user.token = 'tok_' + crypto.randomBytes(24).toString('hex');
@@ -713,7 +814,8 @@ const server = http.createServer(async (req, res) => {
                     name: user.name,
                     avatar_url: user.avatar_url,
                     primary_area: user.primary_area,
-                    joined_communities: user.joined_communities
+                    joined_communities: user.joined_communities,
+                    reward_points: user.reward_points
                 },
                 token: user.token
             });
@@ -794,7 +896,8 @@ const server = http.createServer(async (req, res) => {
             name: user.name,
             avatar_url: user.avatar_url,
             primary_area: user.primary_area,
-            joined_communities: user.joined_communities
+            joined_communities: user.joined_communities,
+            reward_points: typeof user.reward_points === 'number' ? user.reward_points : INITIAL_REWARD_POINTS
         });
     }
 
@@ -1295,6 +1398,54 @@ const server = http.createServer(async (req, res) => {
                 created_at: new Date().toISOString()
             };
 
+            // Identify winning option and only commit voters who voted for the winning option (Requirements 33, 34, 35)
+            if (!Array.isArray(database.ride_participants)) {
+                database.ride_participants = [];
+            }
+            const session = database.voteSessions.find(s => s.id === sessionId);
+            let winningOptionId = null;
+            if (session && Array.isArray(session.vote_options)) {
+                const opt = session.vote_options.find(o => 
+                    o.destination.toLowerCase().includes((winningDestination || '').toLowerCase()) ||
+                    (winningDestination || '').toLowerCase().includes(o.destination.toLowerCase())
+                );
+                if (opt) winningOptionId = opt.id;
+            }
+
+            const winningVoters = sessionVotes.filter(v => winningOptionId ? v.option_id === winningOptionId : true);
+            const selectedVoters = winningVoters.slice(0, allocation.capacity);
+
+            ride.participants = [];
+            for (const voter of selectedVoters) {
+                const vUser = database.users.find(u => u.id === voter.user_id) || { id: voter.user_id, name: 'Commuter' };
+                ride.participants.push({
+                    id: vUser.id,
+                    userId: vUser.id,
+                    name: vUser.name,
+                    avatar_url: vUser.avatar_url,
+                    fare: vehicleFare,
+                    commitment_status: 'COMMITTED',
+                    attendance_status: 'CHECK_IN_OPEN',
+                    check_in_at: null
+                });
+
+                const existingPart = database.ride_participants.find(rp => rp.ride_id === ride.id && rp.user_id === vUser.id);
+                if (!existingPart) {
+                    database.ride_participants.push({
+                        id: 'rp_' + ride.id + '_' + vUser.id,
+                        ride_id: ride.id,
+                        user_id: vUser.id,
+                        name: vUser.name,
+                        commitment_status: 'COMMITTED',
+                        attendance_status: 'CHECK_IN_OPEN',
+                        check_in_at: null,
+                        absence_finalized_at: null,
+                        created_at: new Date().toISOString()
+                    });
+                }
+            }
+            ride.rider_count = Math.max(1, ride.participants.length);
+
             database.rides.push(ride);
 
             // Register into live activeVehicles map for real-time map telemetry
@@ -1612,6 +1763,22 @@ const server = http.createServer(async (req, res) => {
                     created_at: new Date().toISOString()
                 };
 
+                if (!Array.isArray(database.ride_participants)) database.ride_participants = [];
+                const existingRp = database.ride_participants.find(rp => rp.ride_id === rideId && rp.user_id === user.id);
+                if (!existingRp) {
+                    database.ride_participants.push({
+                        id: 'rp_' + rideId + '_' + user.id,
+                        ride_id: rideId,
+                        user_id: user.id,
+                        name: user.name,
+                        commitment_status: 'COMMITTED',
+                        attendance_status: 'CHECK_IN_OPEN',
+                        check_in_at: null,
+                        absence_finalized_at: null,
+                        created_at: new Date().toISOString()
+                    });
+                }
+
                 database.bookings.push(newBooking);
                 saveDb();
 
@@ -1625,6 +1792,333 @@ const server = http.createServer(async (req, res) => {
             } catch (e) {
                 return sendJson(res, 500, { error: e.message });
             }
+        }
+    }
+
+    // ----------------------------------------------------
+    // API: User Rewards Overview (Section 66 & 81)
+    // ----------------------------------------------------
+    if (pathname === '/api/users/me/rewards' && req.method === 'GET') {
+        let user = getAuthenticatedUser(req);
+        const database = loadDb();
+        if (!user) {
+            const userId = urlParams.get('userId');
+            if (userId) user = database.users.find(u => u.id === userId);
+        }
+        if (!user) {
+            return sendJson(res, 401, { error: 'Authentication required.' });
+        }
+
+        const points = typeof user.reward_points === 'number' ? user.reward_points : INITIAL_REWARD_POINTS;
+        const history = (database.reward_transactions || [])
+            .filter(t => t.user_id === user.id)
+            .reverse();
+
+        const currentTier = REWARD_TIERS.slice().reverse().find(t => points >= t.minPoints) || REWARD_TIERS[0];
+
+        return sendJson(res, 200, {
+            user_id: user.id,
+            name: user.name,
+            reward_points: points,
+            status: getRewardStatus(points),
+            tier: currentTier,
+            eligible_benefits: getRewardBenefits(user),
+            history: history.slice(0, 50)
+        });
+    }
+
+    // ----------------------------------------------------
+    // API: User Reward History Ledger (Section 9 & 15)
+    // ----------------------------------------------------
+    if (pathname === '/api/users/me/rewards/history' && req.method === 'GET') {
+        let user = getAuthenticatedUser(req);
+        const database = loadDb();
+        if (!user) {
+            const userId = urlParams.get('userId');
+            if (userId) user = database.users.find(u => u.id === userId);
+        }
+        if (!user) {
+            return sendJson(res, 401, { error: 'Authentication required.' });
+        }
+
+        const history = (database.reward_transactions || [])
+            .filter(t => t.user_id === user.id)
+            .reverse();
+
+        return sendJson(res, 200, history);
+    }
+
+    // ----------------------------------------------------
+    // API: Participant Check-In ("I'm Here" - Section 19, 21, 66)
+    // ----------------------------------------------------
+    if (pathname.startsWith('/api/rides/') && pathname.endsWith('/check-in') && req.method === 'POST') {
+        const parts = pathname.split('/');
+        const rideId = parts[3];
+        let user = getAuthenticatedUser(req);
+        let body = {};
+        try { body = await parseJsonBody(req); } catch(e) {}
+        const database = loadDb();
+
+        if (!user && body.userId) {
+            user = database.users.find(u => u.id === body.userId);
+        }
+        if (!user) {
+            return sendJson(res, 401, { error: 'Authentication required to check in.' });
+        }
+
+        if (!Array.isArray(database.ride_participants)) database.ride_participants = [];
+        let participant = database.ride_participants.find(rp => rp.ride_id === rideId && rp.user_id === user.id);
+        const checkInTime = new Date().toISOString();
+
+        if (!participant) {
+            participant = {
+                id: 'rp_' + rideId + '_' + user.id,
+                ride_id: rideId,
+                user_id: user.id,
+                name: user.name,
+                commitment_status: 'COMMITTED',
+                attendance_status: 'PRESENT',
+                check_in_at: checkInTime,
+                absence_finalized_at: null,
+                created_at: checkInTime
+            };
+            database.ride_participants.push(participant);
+        } else {
+            participant.attendance_status = 'PRESENT';
+            participant.check_in_at = checkInTime;
+        }
+
+        // Also sync ride.participants if present
+        const ride = (database.rides || []).find(r => r.id === rideId);
+        if (ride && Array.isArray(ride.participants)) {
+            const ridePart = ride.participants.find(p => p.id === user.id || p.userId === user.id);
+            if (ridePart) {
+                ridePart.attendance_status = 'PRESENT';
+                ridePart.check_in_at = checkInTime;
+            }
+        }
+
+        saveDb();
+
+        broadcastEvent('ATTENDANCE_UPDATED', {
+            rideId,
+            userId: user.id,
+            status: 'PRESENT',
+            checkInAt: checkInTime
+        });
+
+        return sendJson(res, 200, {
+            success: true,
+            status: 'PRESENT',
+            message: "You're checked in.",
+            reward_points_deducted: 0,
+            rideId,
+            userId: user.id,
+            checkInAt: checkInTime
+        });
+    }
+
+    // ----------------------------------------------------
+    // API: Ride Attendance Status (Section 66)
+    // ----------------------------------------------------
+    if (pathname.startsWith('/api/rides/') && pathname.endsWith('/attendance') && req.method === 'GET') {
+        const parts = pathname.split('/');
+        const rideId = parts[3];
+        const database = loadDb();
+        const ride = (database.rides || []).find(r => r.id === rideId);
+        if (!ride) {
+            return sendJson(res, 404, { error: 'Ride not found.' });
+        }
+
+        const participants = (database.ride_participants || []).filter(rp => rp.ride_id === rideId);
+        return sendJson(res, 200, {
+            rideId,
+            finalized: !!ride.attendance_finalized,
+            finalized_at: ride.attendance_finalized_at || null,
+            participants: participants.map(rp => ({
+                id: rp.id,
+                userId: rp.user_id,
+                name: rp.name,
+                commitment_status: rp.commitment_status,
+                attendance_status: rp.attendance_status,
+                check_in_at: rp.check_in_at,
+                absence_finalized_at: rp.absence_finalized_at
+            }))
+        });
+    }
+
+    // ----------------------------------------------------
+    // API: Finalize Attendance (Section 20, 21, 66)
+    // ----------------------------------------------------
+    if (pathname.startsWith('/api/rides/') && pathname.endsWith('/finalize-attendance') && req.method === 'POST') {
+        const parts = pathname.split('/');
+        const rideId = parts[3];
+        const database = loadDb();
+        const ride = (database.rides || []).find(r => r.id === rideId);
+        if (!ride) {
+            return sendJson(res, 404, { error: 'Ride not found.' });
+        }
+
+        if (!Array.isArray(database.ride_participants)) database.ride_participants = [];
+        const participants = database.ride_participants.filter(rp => rp.ride_id === rideId);
+        const nowIso = new Date().toISOString();
+
+        const results = {
+            rideId,
+            present: [],
+            absent: [],
+            cancelled: [],
+            exempt: [],
+            deductions: []
+        };
+
+        for (const p of participants) {
+            if (p.attendance_status === 'PRESENT') {
+                results.present.push(p.user_id);
+                // Present: NO point deduction
+            } else if (p.attendance_status === 'CANCELLED') {
+                results.cancelled.push(p.user_id);
+                // Validly cancelled: NO point deduction
+            } else if (p.attendance_status === 'EXEMPT') {
+                results.exempt.push(p.user_id);
+                // Exempt (system/vehicle issue): NO point deduction
+            } else {
+                // Not checked in -> ABSENT -> -5 reward points (idempotent, once per ride)
+                p.attendance_status = 'ABSENT';
+                p.absence_finalized_at = nowIso;
+                results.absent.push(p.user_id);
+
+                const deductionRes = applyNoShowRewardDeduction(p.user_id, rideId, 'Confirmed community ride not attended');
+                results.deductions.push(deductionRes);
+            }
+        }
+
+        // Sync ride.participants array
+        if (Array.isArray(ride.participants)) {
+            for (const rp of ride.participants) {
+                const match = participants.find(p => p.user_id === (rp.userId || rp.id));
+                if (match) {
+                    rp.attendance_status = match.attendance_status;
+                    rp.check_in_at = match.check_in_at;
+                    rp.absence_finalized_at = match.absence_finalized_at;
+                }
+            }
+        }
+
+        ride.attendance_finalized = true;
+        ride.attendance_finalized_at = nowIso;
+        saveDb();
+
+        broadcastEvent('ATTENDANCE_FINALIZED', {
+            rideId,
+            results
+        });
+
+        return sendJson(res, 200, {
+            success: true,
+            message: 'Attendance finalized.',
+            results
+        });
+    }
+
+    // ----------------------------------------------------
+    // API: Direct No-Show Reward Deduction (Section 28, 66)
+    // ----------------------------------------------------
+    if (pathname === '/api/rewards/no-show' && req.method === 'POST') {
+        try {
+            const body = await parseJsonBody(req);
+            const { userId, rideId, reason } = body;
+            if (!userId || !rideId) {
+                return sendJson(res, 400, { error: 'userId and rideId are required.' });
+            }
+            const result = applyNoShowRewardDeduction(userId, rideId, reason);
+            return sendJson(res, result.success ? 200 : 400, result);
+        } catch(e) {
+            return sendJson(res, 500, { error: e.message });
+        }
+    }
+
+    // ----------------------------------------------------
+    // API: Ride Cancellation (User & System - Section 24, 25, 26, 27)
+    // ----------------------------------------------------
+    if (pathname.startsWith('/api/rides/') && pathname.endsWith('/cancel') && req.method === 'POST') {
+        const parts = pathname.split('/');
+        const rideId = parts[3];
+        let user = getAuthenticatedUser(req);
+        let body = {};
+        try { body = await parseJsonBody(req); } catch(e) {}
+        const database = loadDb();
+        const ride = (database.rides || []).find(r => r.id === rideId);
+        if (!ride) {
+            return sendJson(res, 404, { error: 'Ride not found.' });
+        }
+
+        const isSystemOrVehicleFailure = body.reason === 'VEHICLE_FAILURE' || body.reason === 'SYSTEM_CANCELLED' || body.systemCancelled;
+
+        if (isSystemOrVehicleFailure) {
+            // System or vehicle cancellation: EXEMPT all participants, 0 point change!
+            ride.status = 'CANCELLED';
+            ride.cancellation_reason = body.reason || 'SYSTEM_CANCELLED';
+            if (Array.isArray(database.ride_participants)) {
+                for (const rp of database.ride_participants) {
+                    if (rp.ride_id === rideId) {
+                        rp.attendance_status = 'EXEMPT';
+                    }
+                }
+            }
+            saveDb();
+            broadcastEvent('RIDE_CANCELLED', { rideId, reason: ride.cancellation_reason, penalty: 0 });
+            return sendJson(res, 200, { success: true, message: 'Ride cancelled by system. All participants exempt from penalty.', penalty: 0 });
+        }
+
+        // User cancellation
+        const userId = (user && user.id) || body.userId;
+        if (!userId) {
+            return sendJson(res, 401, { error: 'Authentication required.' });
+        }
+
+        const participant = (database.ride_participants || []).find(rp => rp.ride_id === rideId && rp.user_id === userId);
+        if (participant) {
+            participant.attendance_status = 'CANCELLED';
+            participant.cancelled_at = new Date().toISOString();
+        }
+
+        // Cancellation cutoff check
+        const isLateCancellation = !!body.isLateCancellation;
+        let pointsChange = 0;
+        if (isLateCancellation) {
+            const deductionRes = applyNoShowRewardDeduction(userId, rideId, 'Late cancellation after cutoff');
+            pointsChange = deductionRes.points_change || 0;
+        }
+
+        saveDb();
+        broadcastEvent('RIDE_COMMITTED', { rideId, userId, status: 'CANCELLED' });
+
+        return sendJson(res, 200, {
+            success: true,
+            status: 'CANCELLED',
+            points_change: pointsChange,
+            message: pointsChange < 0 ? '5 reward points deducted due to late cancellation.' : 'Ride cancelled successfully with 0 penalty.'
+        });
+    }
+
+    // ----------------------------------------------------
+    // API: Get Single Ride Details
+    // ----------------------------------------------------
+    if (pathname.startsWith('/api/rides/') && req.method === 'GET') {
+        const parts = pathname.split('/');
+        if (parts.length === 4) {
+            const rideId = parts[3];
+            const database = loadDb();
+            const ride = (database.rides || []).find(r => r.id === rideId);
+            if (ride) {
+                const participants = (database.ride_participants || []).filter(rp => rp.ride_id === rideId);
+                return sendJson(res, 200, {
+                    ...ride,
+                    participants
+                });
+            }
+            return sendJson(res, 404, { error: 'Ride not found' });
         }
     }
 
