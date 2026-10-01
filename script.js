@@ -4089,6 +4089,61 @@ function handleDriverArrivedAtStop(payload) {
     showNotificationToast('🚗 Your driver has arrived at your pickup stop! Please confirm attendance.');
 }
 
+// ==========================================
+// REALTIME DRIVER LOCATION UPDATE (Prompt #35: Live Vehicle Tracking)
+// ==========================================
+let _driverLiveMarker = null; // Temporary marker for driver vehicle when not in vehicleMarkersMap
+
+function handleDriverLocationUpdate(payload) {
+    if (!payload || !payload.latitude || !payload.longitude) return;
+    if (!communityMap) return;
+
+    const lat = payload.latitude;
+    const lng = payload.longitude;
+    const driverId = payload.driverId;
+    const speedKmh = payload.speed ? Math.round(payload.speed * 3.6) : 0;
+
+    // Try to find existing vehicle marker for this driver
+    let found = false;
+    if (socialMapState && socialMapState.vehicleMarkersMap) {
+        socialMapState.vehicleMarkersMap.forEach((marker, vehicleId) => {
+            // Match by driverId or first vehicle (demo has single driver)
+            if (!found) {
+                marker.setLatLng([lat, lng]);
+                found = true;
+            }
+        });
+    }
+
+    // Fallback: maintain a dedicated live driver marker on the customer map
+    if (!found) {
+        if (!_driverLiveMarker) {
+            const driverIcon = L.divIcon({
+                className: 'bg-transparent',
+                html: `<div style="position:relative;cursor:pointer;display:flex;flex-direction:column;align-items:center;">
+                    <div style="padding:5px 10px;border-radius:12px;background:rgba(15,23,42,0.95);border:2px solid #F5B800;box-shadow:0 4px 16px rgba(0,0,0,0.6);display:flex;align-items:center;gap:6px;color:white;font-size:11px;font-weight:800;">
+                        <i class="fa-solid fa-van-shuttle" style="color:#F5B800;"></i>
+                        <span>Driver</span>
+                    </div>
+                    <div style="width:8px;height:8px;border-radius:50%;background:#F5B800;margin-top:2px;box-shadow:0 0 6px #F5B800;"></div>
+                </div>`,
+                iconSize: [90, 42],
+                iconAnchor: [45, 42]
+            });
+            _driverLiveMarker = L.marker([lat, lng], {
+                icon: driverIcon,
+                zIndexOffset: 1200
+            }).addTo(communityMap);
+            _driverLiveMarker.bindTooltip(
+                `<div style="font-family:Inter,sans-serif;font-size:11px;"><strong>Satish Sharma</strong><br/>🚐 En route to pickup<br/><span style="color:#059669;">${speedKmh} km/h</span></div>`,
+                { direction: 'top', offset: [0, -40], permanent: false }
+            );
+        } else {
+            _driverLiveMarker.setLatLng([lat, lng]);
+        }
+    }
+}
+
 function handlePassengerMarkedPresent(payload) {
     const user = window.saathSupabase?.currentUser;
     if (!user) return;
@@ -4223,4 +4278,6 @@ if (typeof window !== 'undefined') {
     window.handleOpenNotThereModal = handleOpenNotThereModal;
     window.closeAttendanceAbsentModal = closeAttendanceAbsentModal;
     window.confirmPassengerAbsence = confirmPassengerAbsence;
+    // Realtime driver vehicle tracking on customer map
+    window.handleDriverLocationUpdate = handleDriverLocationUpdate;
 }

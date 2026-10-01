@@ -934,6 +934,9 @@ const server = http.createServer(async (req, res) => {
         // SSE Realtime Stream Endpoint (Prompt #49: /api/events & /api/events/stream)
         // ----------------------------------------------------
         if (pathname === '/api/events' || pathname === '/api/events/stream') {
+            req.socket.setTimeout(0);
+            req.socket.setNoDelay(true);
+            req.socket.setKeepAlive(true);
             res.writeHead(200, {
                 'Content-Type': 'text/event-stream; charset=UTF-8',
                 'Cache-Control': 'no-cache, no-transform',

@@ -37,10 +37,96 @@
         .touch-btn { min-height: 44px; }
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        #driverMap { z-index: 10; }
+        /* FIX: Explicit pixel height so Leaflet always gets a non-zero container */
+        #driverMap { z-index: 10; min-height: 440px; height: 440px; }
+        /* PIN screen overlay */
+        #driverPinOverlay { position: fixed; inset: 0; z-index: 9999; background: #0B1120; display: flex; align-items: center; justify-content: center; }
     </style>
 </head>
 <body class="bg-[#0B1120] text-gray-100 min-h-screen flex flex-col antialiased selection:bg-brandYellow selection:text-darkTheme">
+
+    <!-- Global PIN handler — defined early so onclick on overlay always works -->
+    <script>
+        // Real DB token for usr_satish_driver (matches saath-db.json)
+        var DRIVER_PINS = { '1234': 'tok_a3d862377c3e298eaebdfcc11f65377f2190f0cb2d7fa800' };
+        function submitDriverPin() {
+            var input = document.getElementById('driverPinInput');
+            var errEl = document.getElementById('pinError');
+            if (!input) return;
+            var pin = input.value.trim();
+            var token = DRIVER_PINS[pin];
+            if (!token) {
+                if (errEl) { errEl.style.display = 'block'; }
+                input.value = '';
+                input.style.borderColor = '#ef4444';
+                setTimeout(function(){ input.style.borderColor = '#334155'; }, 1500);
+                return;
+            }
+            if (errEl) errEl.style.display = 'none';
+            // Inject into saathSupabase
+            if (window.saathSupabase) window.saathSupabase.token = token;
+            // Persist across refreshes
+            try { sessionStorage.setItem('driver_session_token', token); } catch(e) {}
+            // Hide overlay
+            var overlay = document.getElementById('driverPinOverlay');
+            if (overlay) {
+                overlay.style.opacity = '0';
+                overlay.style.transition = 'opacity 0.3s';
+                setTimeout(function(){ overlay.style.display = 'none'; }, 300);
+            }
+            // Bootstrap driver portal (defined in bottom script)
+            if (typeof bootstrapDriverPortal === 'function') {
+                bootstrapDriverPortal();
+            } else {
+                // Retry once bottom script is ready
+                setTimeout(function(){ if (typeof bootstrapDriverPortal === 'function') bootstrapDriverPortal(); }, 200);
+            }
+        }
+    </script>
+
+    <!-- Driver PIN Login Overlay -->
+    <div id="driverPinOverlay" style="position:fixed;inset:0;z-index:9999;background:#0B1120;display:flex;align-items:center;justify-content:center;">
+        <div style="width:100%;max-width:380px;padding:0 16px;">
+            <!-- Brand -->
+            <div style="text-align:center;margin-bottom:28px;">
+                <div style="display:inline-flex;align-items:center;gap:10px;margin-bottom:10px;">
+                    <i class="fa-solid fa-route" style="color:#F5B800;font-size:2rem;"></i>
+                    <span style="font-weight:900;font-size:1.75rem;color:white;letter-spacing:-0.5px;">SAATH<span style="color:#F5B800;">CHALO</span></span>
+                </div>
+                <p style="color:#94a3b8;font-size:0.875rem;">Driver Portal &mdash; Enter your PIN to continue</p>
+            </div>
+            <!-- Card -->
+            <div style="background:#1E293B;border-radius:24px;padding:24px;border:1px solid #334155;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+                <!-- Driver info strip -->
+                <div style="display:flex;align-items:center;gap:12px;padding:12px;background:rgba(15,23,42,0.8);border-radius:16px;border:1px solid #334155;margin-bottom:16px;">
+                    <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80"
+                         style="width:48px;height:48px;border-radius:50%;border:2px solid #F5B800;object-fit:cover;">
+                    <div>
+                        <p style="font-weight:700;color:white;font-size:0.9rem;margin:0;">Satish Sharma</p>
+                        <p style="color:#94a3b8;font-size:0.7rem;margin:0;">Traveller &bull; EV &bull; UP16-TR-2024</p>
+                    </div>
+                </div>
+                <!-- PIN input -->
+                <label style="color:#94a3b8;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;display:block;margin-bottom:8px;">4-Digit Driver PIN</label>
+                <input id="driverPinInput" type="password" inputmode="numeric" maxlength="4" placeholder="&bull; &bull; &bull; &bull;"
+                    style="width:100%;background:#0F172A;border:2px solid #334155;border-radius:16px;color:white;text-align:center;font-size:1.8rem;font-weight:900;letter-spacing:0.5rem;padding:14px 0;outline:none;transition:border-color 0.2s;box-sizing:border-box;"
+                    oninput="if(this.value.length===4){ this.style.borderColor='#F5B800'; submitDriverPin(); } else { this.style.borderColor='#334155'; }"
+                    onfocus="this.style.borderColor='#F5B800';" onblur="this.style.borderColor='#334155';">
+                <!-- Error message -->
+                <p id="pinError" style="display:none;color:#f87171;font-size:0.75rem;font-weight:700;text-align:center;margin:8px 0 0;">Incorrect PIN. Demo PIN is <strong>1234</strong>.</p>
+                <!-- Submit button -->
+                <button onclick="submitDriverPin()"
+                    style="width:100%;background:#F5B800;color:#0F172A;font-weight:900;font-size:0.9rem;padding:16px;border-radius:16px;border:none;cursor:pointer;margin-top:16px;box-shadow:0 4px 20px rgba(245,184,0,0.3);transition:background 0.2s;"
+                    onmouseover="this.style.background='#fbbf24';" onmouseout="this.style.background='#F5B800';">
+                    <i class="fa-solid fa-unlock" style="margin-right:8px;"></i>UNLOCK DRIVER PORTAL
+                </button>
+                <!-- Hint -->
+                <p style="text-align:center;color:#64748b;font-size:0.7rem;margin-top:12px;margin-bottom:0;">
+                    Demo PIN: <strong style="color:#F5B800;">1234</strong>
+                </p>
+            </div>
+        </div>
+    </div>
 
     <!-- Top Driver Navbar -->
     <nav class="sticky top-0 z-50 bg-darkTheme/95 backdrop-blur-md border-b border-gray-800 shadow-md">
@@ -261,7 +347,7 @@
                     </div>
 
                     <!-- Leaflet / Google Maps Canvas -->
-                    <div id="driverMap" class="flex-1 w-full rounded-2xl bg-gray-900 overflow-hidden relative">
+                    <div id="driverMap" class="flex-1 w-full min-h-[400px] rounded-2xl bg-gray-900 overflow-hidden relative" style="height: 400px;">
                         <!-- Driver map rendered here -->
                     </div>
 
@@ -272,8 +358,8 @@
                             <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-yellow-400"></span> Moderate</span>
                             <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500"></span> Heavy</span>
                         </div>
-                        <span id="driverGpsStatusText" class="font-mono text-emerald-400 flex items-center gap-1">
-                            <i class="fa-solid fa-satellite-dish"></i> GPS Active
+                        <span id="driverGpsStatusText" class="font-mono text-gray-500 flex items-center gap-1">
+                            <i class="fa-solid fa-satellite-dish"></i> Waiting for GPS...
                         </span>
                     </div>
                 </div>
@@ -298,18 +384,40 @@
         let routePolylines = [];
         let gpsWatchId = null;
 
-        document.addEventListener('DOMContentLoaded', async () => {
+        // NOTE: submitDriverPin is defined in the early <script> block at top of body (global scope)
+
+        async function bootstrapDriverPortal() {
+            // FIX: Initialize map FIRST, then load data, so renderRideStopsOnMap has a valid map
             initDriverMap();
             await loadDriverProfile();
             await loadDriverDemandStats('MORNING');
             await loadDriverCurrentRide();
             startDriverLiveLocationBroadcast();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Init supabase SSE (single connection via supabase-client.js)
+            if (window.saathSupabase) {
+                window.saathSupabase.init();
+            }
+            // Check if already unlocked in same browser session
+            const savedToken = sessionStorage.getItem('driver_session_token');
+            if (savedToken) {
+                if (window.saathSupabase) window.saathSupabase.token = savedToken;
+                document.getElementById('driverPinOverlay').style.display = 'none';
+                bootstrapDriverPortal();
+            }
+            // Allow Enter key on PIN input
+            const pinInput = document.getElementById('driverPinInput');
+            if (pinInput) {
+                pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') submitDriverPin(); });
+            }
         });
 
         // Initialize Map
         function initDriverMap() {
             const container = document.getElementById('driverMap');
-            if (!container) return;
+            if (!container || driverMapInstance) return; // prevent double-init
 
             const defaultCoords = [28.4744, 77.5040]; // Knowledge Park II
             driverMapInstance = L.map('driverMap', {
@@ -332,11 +440,19 @@
             // Initial driver vehicle marker
             const driverIcon = L.divIcon({
                 className: 'bg-transparent',
-                html: `<div class="w-10 h-10 bg-brandYellow text-darkTheme rounded-full border-2 border-white shadow-2xl flex items-center justify-center font-bold text-lg animate-pulse"><i class="fa-solid fa-van-shuttle"></i></div>`,
+                html: `<div style="width:40px;height:40px;background:#F5B800;color:#0F172A;border-radius:50%;border:2px solid white;box-shadow:0 4px 16px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:18px;"><i class="fa-solid fa-van-shuttle"></i></div>`,
                 iconSize: [40, 40],
                 iconAnchor: [20, 20]
             });
             driverMarker = L.marker(defaultCoords, { icon: driverIcon }).addTo(driverMapInstance);
+
+            // FIX: Force Leaflet to recalculate size after CSS flex reflow
+            setTimeout(() => {
+                if (driverMapInstance) driverMapInstance.invalidateSize(true);
+            }, 300);
+            setTimeout(() => {
+                if (driverMapInstance) driverMapInstance.invalidateSize(true);
+            }, 800);
         }
 
         function setDriverMapTileMode(mode) {
@@ -660,51 +776,82 @@
             if (payload) updateDriverDemandUI(payload);
         };
 
-        // Live Realtime SSE Listener for driver updates (Prompt #4, #7, #8, #10, #12, #17, #25)
-        if (window.EventSource) {
-            const driverEvtSource = new EventSource('/api/events/stream');
-            driverEvtSource.onmessage = (e) => {
-                try {
-                    const data = JSON.parse(e.data);
-                    if (data.type === 'DEMAND_UPDATED' || data.type === 'SERVICE_ALLOCATION_UPDATED') {
-                        updateDriverDemandUI(data.payload);
-                    } else if (data.type === 'BOOKING_CREATED' || data.type === 'BOOKING_CANCELLED' || data.type === 'VOTE_CREATED' || data.type === 'VOTE_CANCELLED') {
-                        loadDriverDemandStats(data.payload?.sessionType || 'MORNING');
-                    } else if (data.type === 'POOL_UPDATED' || 
-                               data.type === 'VEHICLE_ASSIGNED' || 
-                               data.type === 'PASSENGER_MARKED_PRESENT' || 
-                               data.type === 'PASSENGER_MARKED_ABSENT' || 
-                               data.type === 'ATTENDANCE_UPDATED' || 
-                               data.type === 'STOP_UPDATED' || 
-                               data.type === 'DRIVER_ARRIVED_AT_STOP') {
-                        loadDriverCurrentRide();
-                        loadDriverDemandStats('MORNING');
-                    }
-                } catch(err) {}
-            };
-        }
+        // FIX: Use supabase-client.js SSE (single connection) via window.handle* callbacks.
+        // The duplicate standalone EventSource has been REMOVED to prevent dual connections.
+        // supabase-client.js already calls window.handleDemandUpdated, window.handleServiceAllocationUpdated,
+        // window.handleDriverStatusUpdate, window.handleStopUpdate, etc.
+        // We register the driver-specific handlers below:
+
+        window.handleDemandUpdated = updateDriverDemandUI;
+        window.handleServiceAllocationUpdated = (payload) => {
+            if (payload) updateDriverDemandUI(payload);
+        };
+        window.handleBookingCreated = () => loadDriverDemandStats('MORNING');
+        window.handleBookingCancelled = () => loadDriverDemandStats('MORNING');
+        window.handlePoolUpdated = () => { loadDriverCurrentRide(); loadDriverDemandStats('MORNING'); };
+        window.handleVehicleAssigned = () => { loadDriverCurrentRide(); loadDriverDemandStats('MORNING'); };
+        window.handleStopUpdate = () => loadDriverCurrentRide();
+        window.handleRideStateUpdate = () => loadDriverCurrentRide();
+        window.handleDriverStatusUpdate = (payload) => {
+            if (payload && currentDriver && payload.driverId === currentDriver.id) {
+                updateDriverStatusUI(payload.status);
+            }
+        };
+        // When passenger marks themselves present/absent → refresh ride UI
+        window.handlePassengerMarkedPresent = (payload) => {
+            if (currentRide && payload && payload.rideId === currentRide.id) {
+                loadDriverCurrentRide();
+            }
+        };
+        window.handlePassengerMarkedAbsent = (payload) => {
+            if (currentRide && payload && payload.rideId === currentRide.id) {
+                loadDriverCurrentRide();
+            }
+        };
 
         // Driver Live GPS Broadcast
         function startDriverLiveLocationBroadcast() {
-            if (!navigator.geolocation) return;
+            if (!navigator.geolocation) {
+                const gpsEl = document.getElementById('driverGpsStatusText');
+                if (gpsEl) gpsEl.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> GPS unavailable';
+                return;
+            }
 
-            navigator.geolocation.watchPosition((pos) => {
+            const gpsEl = document.getElementById('driverGpsStatusText');
+
+            gpsWatchId = navigator.geolocation.watchPosition((pos) => {
                 const lat = pos.coords.latitude;
                 const lng = pos.coords.longitude;
                 const heading = pos.coords.heading || 0;
                 const speed = pos.coords.speed || 0;
 
+                // Update GPS badge to active once we have a real fix
+                if (gpsEl) {
+                    gpsEl.className = 'font-mono text-emerald-400 flex items-center gap-1';
+                    gpsEl.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> GPS Active';
+                }
+
+                // Move driver marker on map
                 if (driverMarker) {
                     driverMarker.setLatLng([lat, lng]);
                 }
+                // Pan map to driver if within reasonable range
+                if (driverMapInstance) {
+                    driverMapInstance.panTo([lat, lng], { animate: true, duration: 1.5 });
+                }
 
-                if (currentDriver) {
-                    window.saathSupabase.sendDriverLocation(lat, lng, heading, speed, currentRide?.id, currentDriver.id);
+                // Broadcast to server → SSE → customer map
+                if (window.saathSupabase) {
+                    const driverId = currentDriver ? currentDriver.id : null;
+                    window.saathSupabase.sendDriverLocation(lat, lng, heading, speed, currentRide?.id, driverId);
                 }
             }, (err) => {
-                // If permission denied in test environment, use fallback smooth simulation
-                console.log('[Driver GPS] Location permission note:', err.message);
-            }, { enableHighAccuracy: true });
+                console.log('[Driver GPS] Permission note:', err.message);
+                if (gpsEl) {
+                    gpsEl.className = 'font-mono text-yellow-400 flex items-center gap-1';
+                    gpsEl.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Location denied';
+                }
+            }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 });
         }
     </script>
 </body>
