@@ -1278,7 +1278,8 @@ function closeVoteWarningModal() {
 async function confirmVoteSubmission() {
     if (!pendingVoteData) return;
 
-    const { sessionId, optionId, destination } = pendingVoteData;
+    const votePayload = { ...pendingVoteData };
+    const { sessionId, optionId, destination } = votePayload;
     closeVoteWarningModal();
 
     try {

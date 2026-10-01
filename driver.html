@@ -87,6 +87,42 @@
     <!-- Main Driver Content Container -->
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
+        <!-- Live Demand & Automated Service Allocation Banner (Prompts #21, #22, #23, #24, #25) -->
+        <div class="bg-cardDark p-4 sm:p-5 rounded-3xl border-2 border-brandYellow/60 shadow-xl relative overflow-hidden">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                        <span id="demandSessionBadge" class="text-xs font-black uppercase tracking-wider text-brandYellow">MORNING COMMUTE SESSION</span>
+                        <span class="text-[11px] text-gray-400">• Corridor: Knowledge Park ↔ Pari Chowk</span>
+                    </div>
+                    <p class="text-xs text-gray-400">Live pooling demand & automated fleet allocation based on active commuters</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-6 bg-gray-900/80 px-4 py-3 rounded-2xl border border-gray-800">
+                    <div>
+                        <span class="text-[10px] text-gray-400 uppercase font-extrabold tracking-wider block">LIVE DEMAND</span>
+                        <span id="statLiveDemand" class="text-xl font-black text-white font-mono">18</span>
+                    </div>
+                    <div class="h-8 w-px bg-gray-800"></div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 uppercase font-extrabold tracking-wider block">CONFIRMED RIDERS</span>
+                        <span id="statConfirmedRiders" class="text-xl font-black text-emerald-400 font-mono">15</span>
+                    </div>
+                    <div class="h-8 w-px bg-gray-800"></div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 uppercase font-extrabold tracking-wider block">ALLOCATED SERVICE</span>
+                        <span id="statServiceType" class="text-xs font-black text-darkTheme bg-brandYellow px-2.5 py-1 rounded-lg inline-block mt-0.5">AUTO</span>
+                    </div>
+                    <div class="h-8 w-px bg-gray-800"></div>
+                    <div>
+                        <span class="text-[10px] text-gray-400 uppercase font-extrabold tracking-wider block">ACTIVE ROUTES</span>
+                        <span id="statActiveRoutes" class="text-xl font-black text-white font-mono">1</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Metrics Overview Grid -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-cardDark p-4 sm:p-5 rounded-2xl border border-gray-800 shadow-sm flex items-center gap-3.5">
@@ -265,6 +301,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             initDriverMap();
             await loadDriverProfile();
+            await loadDriverDemandStats('MORNING');
             await loadDriverCurrentRide();
             startDriverLiveLocationBroadcast();
         });
@@ -582,18 +619,66 @@
             }
         }
 
-        // Live Realtime SSE Listener for driver updates (Prompt #4, #7, #8, #17)
+        // Load Driver Live Demand & Service Allocation (Prompts #21, #22, #23, #24, #25)
+        async function loadDriverDemandStats(sessionType = 'MORNING') {
+            try {
+                const res = await window.saathSupabase.getDriverDemand(sessionType);
+                if (res) {
+                    updateDriverDemandUI(res);
+                }
+            } catch(e) {
+                console.warn('Demand stats load note:', e);
+            }
+        }
+
+        function updateDriverDemandUI(stats) {
+            if (!stats) return;
+            const badge = document.getElementById('demandSessionBadge');
+            const d = document.getElementById('statLiveDemand');
+            const c = document.getElementById('statConfirmedRiders');
+            const s = document.getElementById('statServiceType');
+            const r = document.getElementById('statActiveRoutes');
+
+            if (badge && stats.sessionType) badge.innerText = `${stats.sessionType} COMMUTE SESSION`;
+            if (d && stats.demand !== undefined) d.innerText = stats.demand;
+            if (c && stats.confirmedRiders !== undefined) c.innerText = stats.confirmedRiders;
+            if (s && stats.serviceType) {
+                s.innerText = stats.serviceType;
+                if (stats.serviceType === 'AUTO') {
+                    s.className = 'text-xs font-black text-darkTheme bg-brandYellow px-2.5 py-1 rounded-lg inline-block mt-0.5';
+                } else if (stats.serviceType === 'SMALL_SHUTTLE') {
+                    s.className = 'text-xs font-black text-white bg-blue-600 px-2.5 py-1 rounded-lg inline-block mt-0.5';
+                } else {
+                    s.className = 'text-xs font-black text-white bg-emerald-600 px-2.5 py-1 rounded-lg inline-block mt-0.5';
+                }
+            }
+            if (r && stats.activeRoutes !== undefined) r.innerText = stats.activeRoutes;
+        }
+
+        window.handleDemandUpdated = updateDriverDemandUI;
+        window.handleServiceAllocationUpdated = (payload) => {
+            if (payload) updateDriverDemandUI(payload);
+        };
+
+        // Live Realtime SSE Listener for driver updates (Prompt #4, #7, #8, #10, #12, #17, #25)
         if (window.EventSource) {
             const driverEvtSource = new EventSource('/api/events/stream');
             driverEvtSource.onmessage = (e) => {
                 try {
                     const data = JSON.parse(e.data);
-                    if (data.type === 'PASSENGER_MARKED_PRESENT' || 
-                        data.type === 'PASSENGER_MARKED_ABSENT' || 
-                        data.type === 'ATTENDANCE_UPDATED' || 
-                        data.type === 'STOP_UPDATED' || 
-                        data.type === 'DRIVER_ARRIVED_AT_STOP') {
+                    if (data.type === 'DEMAND_UPDATED' || data.type === 'SERVICE_ALLOCATION_UPDATED') {
+                        updateDriverDemandUI(data.payload);
+                    } else if (data.type === 'BOOKING_CREATED' || data.type === 'BOOKING_CANCELLED' || data.type === 'VOTE_CREATED' || data.type === 'VOTE_CANCELLED') {
+                        loadDriverDemandStats(data.payload?.sessionType || 'MORNING');
+                    } else if (data.type === 'POOL_UPDATED' || 
+                               data.type === 'VEHICLE_ASSIGNED' || 
+                               data.type === 'PASSENGER_MARKED_PRESENT' || 
+                               data.type === 'PASSENGER_MARKED_ABSENT' || 
+                               data.type === 'ATTENDANCE_UPDATED' || 
+                               data.type === 'STOP_UPDATED' || 
+                               data.type === 'DRIVER_ARRIVED_AT_STOP') {
                         loadDriverCurrentRide();
+                        loadDriverDemandStats('MORNING');
                     }
                 } catch(err) {}
             };

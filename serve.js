@@ -247,6 +247,7 @@ function loadDb() {
                             avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
                             vehicle_id: 'VH-SHUTTLE-1',
                             vehicle_type: 'TRAVELLER',
+                            driver_category: 'SMALL_SHUTTLE',
                             fuel_type: 'EV',
                             vehicle_title: 'Traveller • EV',
                             registration_number: 'UP16-TR-2024',
@@ -270,6 +271,7 @@ function loadDb() {
                             avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
                             vehicle_id: 'VH-AUTO-1',
                             vehicle_type: 'AUTO',
+                            driver_category: 'AUTO',
                             fuel_type: 'CNG',
                             vehicle_title: 'Auto • CNG',
                             registration_number: 'UP16-AT-1411',
@@ -284,8 +286,65 @@ function loadDb() {
                             today_earnings: 320,
                             token: 'tok_driver_ramesh',
                             created_at: new Date().toISOString()
+                        },
+                        {
+                            id: 'drv_gurmeet_singh',
+                            user_id: 'usr_gurmeet_driver',
+                            name: 'Gurmeet Singh',
+                            phone: '+91 98765 43212',
+                            avatar_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
+                            vehicle_id: 'VH-BUS-1',
+                            vehicle_type: 'BUS',
+                            driver_category: 'BIG_SHUTTLE',
+                            fuel_type: 'CNG',
+                            vehicle_title: 'Bus • CNG',
+                            registration_number: 'UP16-BS-5002',
+                            capacity: 50,
+                            available_seats: 28,
+                            status: 'ONLINE',
+                            rating: 4.9,
+                            current_latitude: 28.4840,
+                            current_longitude: 77.5180,
+                            service_area: 'Knowledge Park',
+                            today_rides: 2,
+                            today_earnings: 950,
+                            token: 'tok_driver_gurmeet',
+                            created_at: new Date().toISOString()
                         }
                     ];
+                }
+
+                // Additive migration: Ensure driver_category exists on all drivers
+                for (const d of db.drivers) {
+                    if (!d.driver_category) {
+                        d.driver_category = d.vehicle_type === 'AUTO' ? 'AUTO' : (d.vehicle_type === 'BUS' ? 'BIG_SHUTTLE' : 'SMALL_SHUTTLE');
+                    }
+                }
+                if (!db.drivers.some(d => d.id === 'drv_gurmeet_singh')) {
+                    db.drivers.push({
+                        id: 'drv_gurmeet_singh',
+                        user_id: 'usr_gurmeet_driver',
+                        name: 'Gurmeet Singh',
+                        phone: '+91 98765 43212',
+                        avatar_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
+                        vehicle_id: 'VH-BUS-1',
+                        vehicle_type: 'BUS',
+                        driver_category: 'BIG_SHUTTLE',
+                        fuel_type: 'CNG',
+                        vehicle_title: 'Bus • CNG',
+                        registration_number: 'UP16-BS-5002',
+                        capacity: 50,
+                        available_seats: 28,
+                        status: 'ONLINE',
+                        rating: 4.9,
+                        current_latitude: 28.4840,
+                        current_longitude: 77.5180,
+                        service_area: 'Knowledge Park',
+                        today_rides: 2,
+                        today_earnings: 950,
+                        token: 'tok_driver_gurmeet',
+                        created_at: new Date().toISOString()
+                    });
                 }
 
                 // Add driver accounts to users table with role: 'DRIVER'
@@ -300,6 +359,7 @@ function loadDb() {
                         joined_communities: ['knowledge-park'],
                         role: 'DRIVER',
                         driver_id: 'drv_satish_sharma',
+                        driver_category: 'SMALL_SHUTTLE',
                         token: 'tok_driver_satish',
                         reward_points: 100,
                         created_at: new Date().toISOString()
@@ -314,7 +374,23 @@ function loadDb() {
                         joined_communities: ['knowledge-park'],
                         role: 'DRIVER',
                         driver_id: 'drv_ramesh_kumar',
+                        driver_category: 'AUTO',
                         token: 'tok_driver_ramesh',
+                        reward_points: 100,
+                        created_at: new Date().toISOString()
+                    },
+                    {
+                        id: 'usr_gurmeet_driver',
+                        name: 'Gurmeet Singh (Driver)',
+                        email: 'gurmeet.driver@saathchalo.in',
+                        passwordHash: hashPassword('driver123'),
+                        avatar_url: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=150&q=80',
+                        primary_area: 'Knowledge Park',
+                        joined_communities: ['knowledge-park'],
+                        role: 'DRIVER',
+                        driver_id: 'drv_gurmeet_singh',
+                        driver_category: 'BIG_SHUTTLE',
+                        token: 'tok_driver_gurmeet',
                         reward_points: 100,
                         created_at: new Date().toISOString()
                     }
@@ -651,6 +727,57 @@ function broadcastEvent(type, payload) {
     }
 }
 
+// Demand & Service Allocation Engine (Prompts #10, #12, #21, #22, #23, #24, #25)
+const AUTO_MAX_DEMAND = 20;
+const SMALL_SHUTTLE_MAX_DEMAND = 40;
+
+function getServiceAllocationType(demandCount) {
+    if (demandCount <= AUTO_MAX_DEMAND) return 'AUTO';
+    if (demandCount <= SMALL_SHUTTLE_MAX_DEMAND) return 'SMALL_SHUTTLE';
+    return 'BIG_SHUTTLE';
+}
+
+function getSessionDemandStats(sessionType = 'MORNING') {
+    const database = loadDb();
+    const sType = (sessionType || 'MORNING').toUpperCase();
+
+    // 1. Confirmed riders: real active confirmed bookings in this session
+    const confirmedBookings = (database.bookings || []).filter(b => 
+        b.status === 'CONFIRMED' && 
+        ((b.session_type || 'MORNING').toUpperCase() === sType)
+    );
+    const confirmedRiders = confirmedBookings.length;
+
+    // 2. Real demand: Confirmed bookings + active votes cast for this commute session
+    const matchingSession = (database.voteSessions || []).find(vs => 
+        (vs.session_type || '').toUpperCase() === sType ||
+        (sType === 'MORNING' ? vs.id.includes('morning') : !vs.id.includes('morning'))
+    );
+    const voteCount = matchingSession 
+        ? (database.votes || []).filter(v => v.vote_session_id === matchingSession.id).length 
+        : 0;
+
+    const demand = Math.max(confirmedRiders, voteCount + confirmedRiders);
+    const serviceType = getServiceAllocationType(demand);
+
+    const activeRides = (database.rides || []).filter(r => 
+        r.status === 'CONFIRMED' && 
+        ((r.session_type || 'MORNING').toUpperCase() === sType)
+    );
+    const activeRoutes = Math.max(1, activeRides.length);
+
+    return {
+        sessionType: sType,
+        demand,
+        confirmedRiders,
+        serviceType,
+        activeRoutes,
+        autoMaxDemand: AUTO_MAX_DEMAND,
+        smallShuttleMaxDemand: SMALL_SHUTTLE_MAX_DEMAND,
+        timestamp: new Date().toISOString()
+    };
+}
+
 const ARRIVAL_GEOFENCE_RADIUS_METERS = 1000; // 1km configurable arrival radius
 
 function calculateHaversineDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -812,22 +939,32 @@ const server = http.createServer(async (req, res) => {
                 'Cache-Control': 'no-cache, no-transform',
                 'Connection': 'keep-alive',
                 'X-Accel-Buffering': 'no',
-                'Access-Control-Allow-Origin': '*'
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': '*'
             });
+            if (typeof res.flushHeaders === 'function') {
+                res.flushHeaders();
+            }
+
+            // 16KB comment padding: Cloudflare edge and reverse proxies buffer SSE responses until
+            // the proxy buffer threshold (typically 8KB-16KB) is filled. This padding comment forces Cloudflare
+            // into immediate unbuffered passthrough streaming mode without affecting EventSource parsers.
+            res.write(':' + ' '.repeat(16384) + '\n\n');
             res.write('retry: 2000\n\n');
-            res.write(': connected\n\n');
+            res.write('data: {"type":"CONNECTED","payload":{"status":"ok","timestamp":"' + new Date().toISOString() + '"}}\n\n');
 
             const clientObj = { res, id: Date.now() + Math.random().toString(36) };
             sseClients.add(clientObj);
 
-            // Keepalive heartbeat every 10s to keep tunnels (Cloudflare QUIC) alive
+            // Keepalive heartbeat every 15s to keep tunnels alive without dropping
             const keepAliveTimer = setInterval(() => {
                 try {
                     res.write(': keepalive\n\n');
                 } catch (e) {
                     clearInterval(keepAliveTimer);
+                    sseClients.delete(clientObj);
                 }
-            }, 10000);
+            }, 15000);
 
             req.on('close', () => {
                 clearInterval(keepAliveTimer);
@@ -835,6 +972,20 @@ const server = http.createServer(async (req, res) => {
             });
             return;
         }
+
+        // ----------------------------------------------------
+        // API: Realtime Health & Debug Endpoint (Prompt #45)
+        // ----------------------------------------------------
+        if (pathname === '/api/realtime/health' && req.method === 'GET') {
+            const database = loadDb();
+            return sendJson(res, 200, {
+                connectedClients: sseClients.size,
+                eventBusStatus: 'ACTIVE',
+                databaseStatus: database ? 'CONNECTED' : 'DISCONNECTED',
+                timestamp: new Date().toISOString()
+            });
+        }
+
 
         // ----------------------------------------------------
         // API: Traffic-Aware ETA (Prompt #36, #37, #49)
@@ -1406,7 +1557,7 @@ const server = http.createServer(async (req, res) => {
             try { body = await parseJsonBody(req); } catch (e) {}
 
             if (!user && body.userId) {
-                user = database.users.find(u => u.id === body.userId);
+                user = database.users.find(u => u.id === body.userId) || { id: body.userId, name: 'Commuter' };
             }
             if (!user) {
                 return sendJson(res, 401, { error: 'Authentication required to cancel vote.' });
@@ -1416,7 +1567,7 @@ const server = http.createServer(async (req, res) => {
             const voteIdx = database.votes.findIndex(v => 
                 (targetSessionId ? v.vote_session_id === targetSessionId : true) && 
                 v.user_id === user.id && 
-                v.community_id === communityId
+                (!v.community_id || v.community_id === communityId)
             );
 
             if (voteIdx >= 0) {
@@ -1441,6 +1592,15 @@ const server = http.createServer(async (req, res) => {
                     total: sessionVotes.length
                 });
 
+                const demandStats = getSessionDemandStats(session ? session.session_type : reqSessionType);
+                broadcastEvent('DEMAND_UPDATED', demandStats);
+                broadcastEvent('SERVICE_ALLOCATION_UPDATED', {
+                    sessionType: demandStats.sessionType,
+                    serviceType: demandStats.serviceType,
+                    demand: demandStats.demand,
+                    confirmedRiders: demandStats.confirmedRiders
+                });
+
                 return sendJson(res, 200, {
                     success: true,
                     message: 'Vote cancelled successfully.',
@@ -1453,6 +1613,7 @@ const server = http.createServer(async (req, res) => {
                 return sendJson(res, 200, {
                     success: true,
                     message: 'No active vote found to cancel.',
+                    total: database.votes.filter(v => targetSessionId ? v.vote_session_id === targetSessionId : true).length,
                     userVotedOptionId: null
                 });
             }
@@ -1508,40 +1669,21 @@ const server = http.createServer(async (req, res) => {
                     else optionId = session.vote_options[0].id;
                 }
 
-                // Enforce one vote per user per session constraint
+                // Enforce one vote per user per session constraint - if user re-votes, update option and broadcast
                 const existingVoteIndex = database.votes.findIndex(v => v.vote_session_id === sessionId && v.user_id === user.id);
                 if (existingVoteIndex >= 0) {
-                    const existingVote = database.votes[existingVoteIndex];
-                    const sessionVotes = database.votes.filter(v => v.vote_session_id === sessionId);
-                    const counts = {};
-                    sessionVotes.forEach(v => {
-                        counts[v.option_id] = (counts[v.option_id] || 0) + 1;
-                    });
-                    const opt = session.vote_options.find(o => o.id === existingVote.option_id);
-                    return sendJson(res, 200, {
-                        success: true,
-                        alreadyVoted: true,
-                        userVote: opt ? opt.destination : existingVote.option_id,
-                        userVotedOptionId: existingVote.option_id,
-                        counts,
-                        total: sessionVotes.length,
-                        options: session.vote_options.map(o => ({
-                            id: o.id,
-                            destination: o.destination,
-                            votes: counts[o.id] || 0
-                        }))
-                    });
+                    database.votes[existingVoteIndex].option_id = optionId;
+                    database.votes[existingVoteIndex].updated_at = new Date().toISOString();
+                } else {
+                    const newVote = {
+                        vote_session_id: sessionId,
+                        option_id: optionId,
+                        user_id: user.id,
+                        community_id: communityId,
+                        created_at: new Date().toISOString()
+                    };
+                    database.votes.push(newVote);
                 }
-
-                const newVote = {
-                    vote_session_id: sessionId,
-                    option_id: optionId,
-                    user_id: user.id,
-                    community_id: communityId,
-                    created_at: new Date().toISOString()
-                };
-
-                database.votes.push(newVote);
                 saveDb();
 
                 // Recalculate counts
@@ -1558,6 +1700,22 @@ const server = http.createServer(async (req, res) => {
                     counts,
                     total: sessionVotes.length
                 });
+                broadcastEvent('VOTE_CREATED', {
+                    sessionId,
+                    communityId,
+                    optionId,
+                    userId: user.id,
+                    sessionType: session ? session.session_type : reqSessionType
+                });
+
+                const demandStats = getSessionDemandStats(session ? session.session_type : reqSessionType);
+                broadcastEvent('DEMAND_UPDATED', demandStats);
+                broadcastEvent('SERVICE_ALLOCATION_UPDATED', {
+                    sessionType: demandStats.sessionType,
+                    serviceType: demandStats.serviceType,
+                    demand: demandStats.demand,
+                    confirmedRiders: demandStats.confirmedRiders
+                });
 
                 const opt = session.vote_options.find(o => o.id === optionId);
                 return sendJson(res, 200, {
@@ -1573,7 +1731,7 @@ const server = http.createServer(async (req, res) => {
                     }))
                 });
             } catch (e) {
-                return sendJson(res, 500, { error: e.message });
+                return sendJson(res, 500, { error: 'Failed to process vote: ' + e.message });
             }
         }
     }
@@ -2022,9 +2180,91 @@ const server = http.createServer(async (req, res) => {
                     });
                 }
 
+                const targetRide = matchedRide || (typeof newRide !== 'undefined' ? newRide : null);
+                if (targetRide) {
+                    targetRide.passengers = (targetRide.participants || []).map(p => ({
+                        id: p.userId || p.id,
+                        name: p.name,
+                        avatar: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+                        pickup: p.pickup,
+                        dropoff: p.dropoff,
+                        distanceKm: p.distanceKm || 4.0,
+                        fare: p.fare,
+                        status: 'WAITING',
+                        attendance_status: 'WAITING'
+                    }));
+
+                    const stopsList = (targetRide.participants || []).map((p, idx) => ({
+                        order: idx + 1,
+                        type: 'PICKUP',
+                        passengerName: p.name,
+                        passenger_name: p.name,
+                        location: p.pickup,
+                        pickup_location: p.pickup,
+                        lat: 28.4744 - (idx * 0.003),
+                        lng: 77.5040 + (idx * 0.003),
+                        status: idx === 0 ? 'NEXT' : 'PENDING',
+                        etaText: `${(idx + 1) * 3} min`
+                    }));
+                    stopsList.push({
+                        order: stopsList.length + 1,
+                        type: 'DROPOFF',
+                        passengerName: 'All Passengers',
+                        passenger_name: 'All Passengers',
+                        location: targetRide.destination || dropoff,
+                        pickup_location: targetRide.destination || dropoff,
+                        lat: 28.4682,
+                        lng: 77.5117,
+                        status: 'PENDING',
+                        etaText: `${(stopsList.length + 1) * 3 + 4} min`
+                    });
+                    targetRide.stops = stopsList;
+                    targetRide.current_stop_index = 0;
+
+                    // Assign eligible driver based on category (AUTO / SMALL_SHUTTLE / BIG_SHUTTLE)
+                    const eligibleDriver = (database.drivers || []).find(d => 
+                        d.status === 'ONLINE' && 
+                        (d.driver_category === targetRide.vehicle_type || d.vehicle_type === targetRide.vehicle_type)
+                    ) || (database.drivers || [])[0];
+
+                    if (eligibleDriver) {
+                        targetRide.driver_id = eligibleDriver.id;
+                        targetRide.driver_name = eligibleDriver.name;
+                        targetRide.vehicle_id = eligibleDriver.vehicle_id;
+                        targetRide.vehicle_title = eligibleDriver.vehicle_title;
+                        targetRide.registration_number = eligibleDriver.registration_number;
+                        broadcastEvent('VEHICLE_ASSIGNED', {
+                            rideId: targetRide.id,
+                            driverId: eligibleDriver.id,
+                            driverName: eligibleDriver.name,
+                            vehicleType: eligibleDriver.vehicle_type,
+                            vehicleTitle: eligibleDriver.vehicle_title,
+                            sessionType
+                        });
+                    }
+                }
+
                 database.bookings.push(newBooking);
                 saveDb();
 
+                const demandStats = getSessionDemandStats(sessionType);
+                broadcastEvent('BOOKING_CREATED', {
+                    booking: newBooking,
+                    sessionType
+                });
+                broadcastEvent('DEMAND_UPDATED', demandStats);
+                broadcastEvent('SERVICE_ALLOCATION_UPDATED', {
+                    sessionType,
+                    serviceType: demandStats.serviceType,
+                    demand: demandStats.demand,
+                    confirmedRiders: demandStats.confirmedRiders
+                });
+                if (targetRide) {
+                    broadcastEvent('POOL_UPDATED', {
+                        ride: targetRide,
+                        sessionType
+                    });
+                }
                 broadcastEvent('CONNECTED_USERS_UPDATE', getLiveCommunityStats());
 
                 return sendJson(res, 201, {
@@ -2037,6 +2277,82 @@ const server = http.createServer(async (req, res) => {
             }
         }
     }
+
+    // ----------------------------------------------------
+    // API: Booking Cancellation Handler (Prompt #12)
+    // ----------------------------------------------------
+    if (pathname.startsWith('/api/bookings/') && (req.method === 'DELETE' || (req.method === 'POST' && pathname.endsWith('/cancel')))) {
+        const parts = pathname.split('/');
+        const bookingId = parts[3];
+        let user = getAuthenticatedUser(req);
+        let body = {};
+        try { body = await parseJsonBody(req); } catch(e) {}
+        const database = loadDb();
+
+        const booking = (database.bookings || []).find(b => b.id === bookingId);
+        if (!booking) {
+            return sendJson(res, 404, { error: 'Booking not found.' });
+        }
+
+        if (!user && body.userId) {
+            user = database.users.find(u => u.id === body.userId) || { id: body.userId, name: 'Commuter' };
+        }
+        if (!user) {
+            user = { id: booking.user_id, name: 'Commuter' };
+        }
+
+        if (booking.user_id !== user.id && user.role !== 'ADMIN') {
+            return sendJson(res, 403, { error: 'Unauthorized to cancel this booking.' });
+        }
+
+        booking.status = 'CANCELLED';
+        booking.cancelled_at = new Date().toISOString();
+
+        const sessionType = (booking.session_type || 'MORNING').toUpperCase();
+
+        if (booking.ride_id) {
+            const ride = (database.rides || []).find(r => r.id === booking.ride_id);
+            if (ride) {
+                if (Array.isArray(ride.participants)) {
+                    ride.participants = ride.participants.filter(p => p.userId !== user.id && p.id !== user.id);
+                    ride.rider_count = ride.participants.length;
+                }
+                if (Array.isArray(ride.passengers)) {
+                    ride.passengers = ride.passengers.filter(p => p.id !== user.id);
+                }
+                if (Array.isArray(ride.stops)) {
+                    ride.stops = ride.stops.filter(s => s.passengerName !== user.name);
+                }
+                broadcastEvent('POOL_UPDATED', { ride, sessionType });
+            }
+        }
+
+        saveDb();
+
+        const demandStats = getSessionDemandStats(sessionType);
+
+        broadcastEvent('BOOKING_CANCELLED', {
+            bookingId: booking.id,
+            userId: user.id,
+            sessionType
+        });
+        broadcastEvent('DEMAND_UPDATED', demandStats);
+        broadcastEvent('SERVICE_ALLOCATION_UPDATED', {
+            sessionType,
+            serviceType: demandStats.serviceType,
+            demand: demandStats.demand,
+            confirmedRiders: demandStats.confirmedRiders
+        });
+        broadcastEvent('CONNECTED_USERS_UPDATE', getLiveCommunityStats());
+
+        return sendJson(res, 200, {
+            success: true,
+            bookingId: booking.id,
+            message: 'Booking cancelled successfully.',
+            demandStats
+        });
+    }
+
 
     // ----------------------------------------------------
     // API: User Rewards Overview (Section 66 & 81)
@@ -2253,7 +2569,9 @@ const server = http.createServer(async (req, res) => {
                 status: 'ABSENT',
                 message: 'Ride attendance marked as absent. 5 reward points deducted.',
                 reward_points_deducted: pointsDeducted,
+                points_change: -pointsDeducted,
                 new_balance: user.reward_points,
+                reward_points: user.reward_points,
                 rideId,
                 userId: user.id,
                 absenceFinalizedAt: nowIso
@@ -2466,6 +2784,15 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ----------------------------------------------------
+    // API: Driver Platform - Live Demand & Service Allocation (Prompts #22, #23, #25)
+    // ----------------------------------------------------
+    if (pathname === '/api/driver/demand' && req.method === 'GET') {
+        const sessionType = (urlParams.get('session') || urlParams.get('sessionType') || 'MORNING').toUpperCase();
+        const stats = getSessionDemandStats(sessionType);
+        return sendJson(res, 200, stats);
+    }
+
+    // ----------------------------------------------------
     // API: Driver Platform - Driver Profile & Status (Prompts #31-#43)
     // ----------------------------------------------------
     if (pathname === '/api/driver/me' && req.method === 'GET') {
@@ -2479,6 +2806,7 @@ const server = http.createServer(async (req, res) => {
         if (!driver) {
             return sendJson(res, 404, { error: 'Driver profile not found.' });
         }
+        const category = driver.driver_category || (driver.vehicle_type === 'AUTO' ? 'AUTO' : (driver.vehicle_type === 'BUS' ? 'BIG_SHUTTLE' : 'SMALL_SHUTTLE'));
         return sendJson(res, 200, {
             success: true,
             driver: {
@@ -2489,6 +2817,8 @@ const server = http.createServer(async (req, res) => {
                 avatarUrl: driver.avatar_url,
                 vehicleId: driver.vehicle_id,
                 vehicleType: driver.vehicle_type,
+                driverCategory: category,
+                driver_category: category,
                 fuelType: driver.fuel_type,
                 vehicleTitle: driver.vehicle_title,
                 registrationNumber: driver.registration_number,

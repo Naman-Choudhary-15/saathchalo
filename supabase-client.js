@@ -142,7 +142,7 @@ class SaathLiveService {
         }
 
         try {
-            const sseUrl = window.location.origin + '/api/events';
+            const sseUrl = window.location.origin + '/api/events/stream';
             this.sse = new EventSource(sseUrl);
 
             this.sse.onopen = () => {
@@ -385,6 +385,30 @@ class SaathLiveService {
         } else if (type === 'RIDE_STARTED' || type === 'RIDE_COMPLETED') {
             if (typeof window.handleRideStateUpdate === 'function') {
                 window.handleRideStateUpdate(payload);
+            }
+        } else if (type === 'DEMAND_UPDATED') {
+            if (typeof window.handleDemandUpdated === 'function') {
+                window.handleDemandUpdated(payload);
+            }
+        } else if (type === 'SERVICE_ALLOCATION_UPDATED') {
+            if (typeof window.handleServiceAllocationUpdated === 'function') {
+                window.handleServiceAllocationUpdated(payload);
+            }
+        } else if (type === 'BOOKING_CREATED') {
+            if (typeof window.handleBookingCreated === 'function') {
+                window.handleBookingCreated(payload);
+            }
+        } else if (type === 'BOOKING_CANCELLED') {
+            if (typeof window.handleBookingCancelled === 'function') {
+                window.handleBookingCancelled(payload);
+            }
+        } else if (type === 'POOL_UPDATED') {
+            if (typeof window.handlePoolUpdated === 'function') {
+                window.handlePoolUpdated(payload);
+            }
+        } else if (type === 'VEHICLE_ASSIGNED') {
+            if (typeof window.handleVehicleAssigned === 'function') {
+                window.handleVehicleAssigned(payload);
             }
         }
         if (typeof window !== 'undefined') {
@@ -972,6 +996,18 @@ class SaathLiveService {
         return [];
     }
 
+    async cancelBooking(bookingId) {
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+        return await this.safeFetchJson(`/api/bookings/${bookingId}/cancel`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ userId: this.currentUser?.id })
+        });
+    }
+
     // ==========================================
     // SOCIAL MOBILITY MAP (GEOLOCATION & VEHICLES)
     // ==========================================
@@ -1075,6 +1111,12 @@ class SaathLiveService {
     // ----------------------------------------------------
     // DRIVER PLATFORM APIs (Prompts #31-#43)
     // ----------------------------------------------------
+    async getDriverDemand(sessionType = 'MORNING') {
+        return await this.safeFetchJson(`/api/driver/demand?session=${encodeURIComponent(sessionType)}`, {
+            headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {}
+        });
+    }
+
     async getDriverMe() {
         return await this.safeFetchJson('/api/driver/me', {
             headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {}
