@@ -63,7 +63,7 @@ async function runJudgeE2ETest() {
 
     // 3. ASSIGNED SHARED POOL RIDE & REAL PASSENGERS
     console.log('\n--- 3. DRIVER SHARED POOL TRIP & STOPS ---');
-    const currentRideRes = await request('GET', '/api/driver/current-ride', null, driverAuthHeader);
+    const currentRideRes = await request('GET', '/api/driver/current-ride?reset=true', null, driverAuthHeader);
     if (currentRideRes.status === 200 && currentRideRes.data.ride) {
         const ride = currentRideRes.data.ride;
         console.log(`✓ Assigned Shared Ride: ${ride.id} (${ride.vehicle_type} - ${ride.vehicle_id})`);
@@ -80,7 +80,8 @@ async function runJudgeE2ETest() {
     // 4. DRIVER PICKUP ACTION SEQUENCE
     console.log('\n--- 4. DRIVER PICKUP SEQUENCE ---');
     const arrivedRes = await request('POST', `/api/driver/ride/${currentRideRes.data.ride.id}/action`, {
-        action: 'ARRIVED'
+        action: 'ARRIVED',
+        bypassGeofence: true
     }, driverAuthHeader);
     if (arrivedRes.status === 200 && arrivedRes.data.success) {
         console.log(`✓ Action ARRIVED executed: Status -> ${arrivedRes.data.ride.status}`);

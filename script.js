@@ -4038,6 +4038,170 @@ function handleAttendanceFinalized(payload) {
     fetchAndRenderUserRewards();
 }
 
+// ==========================================
+// DRIVER ARRIVAL & PASSENGER STOP ATTENDANCE (Prompts #1-#14)
+// ==========================================
+window.currentActiveArrivalRideId = null;
+
+function handleDriverArrivedAtStop(payload) {
+    if (!payload) return;
+    const user = window.saathSupabase?.currentUser;
+    if (!user) return;
+
+    // Strict Target Verification (Prompt #3: Only customer associated with that pickup stop)
+    const isTargetPassenger = (payload.passengerId && (user.id === payload.passengerId || payload.passengerId.includes(user.id))) ||
+                              (payload.passengerName && user.name && (user.name.toLowerCase() === payload.passengerName.toLowerCase() || payload.passengerName.toLowerCase().includes(user.name.toLowerCase()) || user.name.toLowerCase().includes(payload.passengerName.toLowerCase())));
+
+    if (!isTargetPassenger) {
+        // Do NOT show prompt to unrelated users or passengers whose stops have not been reached
+        return;
+    }
+
+    window.currentActiveArrivalRideId = payload.rideId;
+    const promptEl = document.getElementById('driverArrivalAttendancePrompt');
+    if (!promptEl) return;
+
+    const locEl = document.getElementById('promptPickupLocation');
+    if (locEl) locEl.innerText = payload.pickupLocation || 'Knowledge Park II';
+
+    const actionBtns = document.getElementById('attendanceActionButtons');
+    if (actionBtns) actionBtns.classList.remove('hidden');
+
+    const confirmedBanner = document.getElementById('attendanceConfirmedBanner');
+    if (confirmedBanner) confirmedBanner.classList.add('hidden');
+
+    const absentBanner = document.getElementById('attendanceAbsentBanner');
+    if (absentBanner) absentBanner.classList.add('hidden');
+
+    const btnImHere = document.getElementById('btnConfirmImHere');
+    if (btnImHere) {
+        btnImHere.disabled = false;
+        btnImHere.innerHTML = '<i class="fa-solid fa-check"></i> <span>✓ I\'M HERE</span>';
+    }
+
+    const btnNotThere = document.getElementById('btnConfirmNotThere');
+    if (btnNotThere) {
+        btnNotThere.disabled = false;
+    }
+
+    promptEl.classList.remove('hidden');
+    showNotificationToast('🚗 Your driver has arrived at your pickup stop! Please confirm attendance.');
+}
+
+function handlePassengerMarkedPresent(payload) {
+    const user = window.saathSupabase?.currentUser;
+    if (!user) return;
+
+    if (payload.passengerId === user.id || (payload.passengerName && user.name && payload.passengerName.includes(user.name))) {
+        const actionBtns = document.getElementById('attendanceActionButtons');
+        if (actionBtns) actionBtns.classList.add('hidden');
+
+        const confirmedBanner = document.getElementById('attendanceConfirmedBanner');
+        if (confirmedBanner) confirmedBanner.classList.remove('hidden');
+
+        showNotificationToast("✓ You're marked as present. Have a great commute!");
+
+        setTimeout(() => {
+            const promptEl = document.getElementById('driverArrivalAttendancePrompt');
+            if (promptEl) promptEl.classList.add('hidden');
+        }, 5000);
+    }
+}
+
+function handlePassengerMarkedAbsent(payload) {
+    const user = window.saathSupabase?.currentUser;
+    if (!user) return;
+
+    if (payload.passengerId === user.id || (payload.passengerName && user.name && payload.passengerName.includes(user.name))) {
+        const actionBtns = document.getElementById('attendanceActionButtons');
+        if (actionBtns) actionBtns.classList.add('hidden');
+
+        const absentBanner = document.getElementById('attendanceAbsentBanner');
+        if (absentBanner) absentBanner.classList.remove('hidden');
+
+        showNotificationToast('5 reward points deducted because you marked that you would not be present for your confirmed ride.');
+        fetchAndRenderUserRewards();
+
+        setTimeout(() => {
+            const promptEl = document.getElementById('driverArrivalAttendancePrompt');
+            if (promptEl) promptEl.classList.add('hidden');
+        }, 6000);
+    }
+}
+
+async function handleConfirmImHere() {
+    const btn = document.getElementById('btnConfirmImHere');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Confirming...</span>';
+    }
+
+    const rideId = window.currentActiveArrivalRideId || 'ride_pool_live_1';
+    try {
+        const res = await window.saathSupabase.sendPassengerAttendance(rideId, 'PRESENT');
+        if (res && res.success) {
+            const actionBtns = document.getElementById('attendanceActionButtons');
+            if (actionBtns) actionBtns.classList.add('hidden');
+
+            const confirmedBanner = document.getElementById('attendanceConfirmedBanner');
+            if (confirmedBanner) confirmedBanner.classList.remove('hidden');
+
+            showNotificationToast("✓ You're marked as present! Driver has been notified.");
+
+            setTimeout(() => {
+                const promptEl = document.getElementById('driverArrivalAttendancePrompt');
+                if (promptEl) promptEl.classList.add('hidden');
+            }, 4500);
+        } else {
+            alert(res?.error || 'Could not record attendance.');
+            if (btn) btn.disabled = false;
+        }
+    } catch(err) {
+        console.error('Check-in error:', err);
+        if (btn) btn.disabled = false;
+    }
+}
+
+function handleOpenNotThereModal() {
+    const modal = document.getElementById('attendanceAbsentConfirmModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeAttendanceAbsentModal() {
+    const modal = document.getElementById('attendanceAbsentConfirmModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function confirmPassengerAbsence() {
+    closeAttendanceAbsentModal();
+    const btnNotThere = document.getElementById('btnConfirmNotThere');
+    if (btnNotThere) btnNotThere.disabled = true;
+
+    const rideId = window.currentActiveArrivalRideId || 'ride_pool_live_1';
+    try {
+        const res = await window.saathSupabase.sendPassengerAttendance(rideId, 'ABSENT');
+        if (res && res.success) {
+            const actionBtns = document.getElementById('attendanceActionButtons');
+            if (actionBtns) actionBtns.classList.add('hidden');
+
+            const absentBanner = document.getElementById('attendanceAbsentBanner');
+            if (absentBanner) absentBanner.classList.remove('hidden');
+
+            showNotificationToast('5 reward points deducted because you marked that you would not be present for your confirmed ride.');
+            await fetchAndRenderUserRewards();
+
+            setTimeout(() => {
+                const promptEl = document.getElementById('driverArrivalAttendancePrompt');
+                if (promptEl) promptEl.classList.add('hidden');
+            }, 5500);
+        } else {
+            alert(res?.error || 'Could not record absence.');
+        }
+    } catch(err) {
+        console.error('Absence error:', err);
+    }
+}
+
 if (typeof window !== 'undefined') {
     window.openRewardsModal = openRewardsModal;
     window.closeRewardsModal = closeRewardsModal;
@@ -4051,4 +4215,11 @@ if (typeof window !== 'undefined') {
     window.closeProfileModal = closeProfileModal;
     window.saveUserProfile = saveUserProfile;
     window.selectProfileAvatar = selectProfileAvatar;
+    window.handleDriverArrivedAtStop = handleDriverArrivedAtStop;
+    window.handlePassengerMarkedPresent = handlePassengerMarkedPresent;
+    window.handlePassengerMarkedAbsent = handlePassengerMarkedAbsent;
+    window.handleConfirmImHere = handleConfirmImHere;
+    window.handleOpenNotThereModal = handleOpenNotThereModal;
+    window.closeAttendanceAbsentModal = closeAttendanceAbsentModal;
+    window.confirmPassengerAbsence = confirmPassengerAbsence;
 }

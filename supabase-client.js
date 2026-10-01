@@ -358,6 +358,18 @@ class SaathLiveService {
             if (typeof appManager !== 'undefined' && typeof appManager.refreshVoting === 'function') {
                 appManager.refreshVoting();
             }
+        } else if (type === 'DRIVER_ARRIVED_AT_STOP' || type === 'ATTENDANCE_OPENED') {
+            if (typeof window.handleDriverArrivedAtStop === 'function') {
+                window.handleDriverArrivedAtStop(payload);
+            }
+        } else if (type === 'PASSENGER_MARKED_PRESENT') {
+            if (typeof window.handlePassengerMarkedPresent === 'function') {
+                window.handlePassengerMarkedPresent(payload);
+            }
+        } else if (type === 'PASSENGER_MARKED_ABSENT') {
+            if (typeof window.handlePassengerMarkedAbsent === 'function') {
+                window.handlePassengerMarkedAbsent(payload);
+            }
         } else if (type === 'DRIVER_LOCATION_UPDATED') {
             if (typeof window.handleDriverLocationUpdate === 'function') {
                 window.handleDriverLocationUpdate(payload);
@@ -374,6 +386,9 @@ class SaathLiveService {
             if (typeof window.handleRideStateUpdate === 'function') {
                 window.handleRideStateUpdate(payload);
             }
+        }
+        if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('saath:event', { detail: { type, payload } }));
         }
     }
 
@@ -813,7 +828,20 @@ class SaathLiveService {
         return await this.safeFetchJson(`/api/rides/${rideId}/check-in`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ userId: this.currentUser?.id })
+            body: JSON.stringify({ userId: this.currentUser?.id, status: 'PRESENT' })
+        });
+    }
+
+    async sendPassengerAttendance(rideId, status = 'PRESENT') {
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+        return await this.safeFetchJson(`/api/rides/${rideId}/attendance`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                userId: this.currentUser?.id,
+                status
+            })
         });
     }
 

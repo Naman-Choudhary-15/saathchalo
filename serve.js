@@ -651,6 +651,22 @@ function broadcastEvent(type, payload) {
     }
 }
 
+const ARRIVAL_GEOFENCE_RADIUS_METERS = 1000; // 1km configurable arrival radius
+
+function calculateHaversineDistanceMeters(lat1, lon1, lat2, lon2) {
+    if (lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined) return 0;
+    const R = 6371e3; // metres
+    const φ1 = Number(lat1) * Math.PI / 180;
+    const φ2 = Number(lat2) * Math.PI / 180;
+    const Δφ = (Number(lat2) - Number(lat1)) * Math.PI / 180;
+    const Δλ = (Number(lon2) - Number(lon1)) * Math.PI / 180;
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
 // Centralized Idempotent Reward Deduction Service (Section 28)
 function applyNoShowRewardDeduction(userId, rideId, reason = 'Confirmed community ride not attended') {
     const database = loadDb();
@@ -1834,7 +1850,8 @@ const server = http.createServer(async (req, res) => {
                 // Search for an active shared ride pool along compatible corridor
                 // ----------------------------------------------------
                 const normDrop = dropoff.toLowerCase();
-                let matchedRide = (database.rides || []).find(r => {
+                const ridesReversed = (database.rides || []).slice().reverse();
+                let matchedRide = ridesReversed.find(r => {
                     if (r.status !== 'CONFIRMED' && r.status !== 'POOL_FORMING') return false;
                     const rDest = (r.destination || '').toLowerCase();
                     const isDestMatch = rDest.includes(normDrop.split(',')[0].trim()) || normDrop.includes(rDest.split(',')[0].trim());
@@ -2075,9 +2092,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ----------------------------------------------------
-    // API: Participant Check-In ("I'm Here" - Section 19, 21, 66)
     // ----------------------------------------------------
-    if (pathname.startsWith('/api/rides/') && pathname.endsWith('/check-in') && req.method === 'POST') {
+    // API: Passenger Stop Attendance (Section 1-14: I'M HERE / I WILL NOT BE THERE)
+    // ----------------------------------------------------
+    if (pathname.startsWith('/api/rides/') && (pathname.endsWith('/attendance') || pathname.endsWith('/check-in')) && req.method === 'POST') {
         const parts = pathname.split('/');
         const rideId = parts[3];
         let user = getAuthenticatedUser(req);
@@ -2085,16 +2103,53 @@ const server = http.createServer(async (req, res) => {
         try { body = await parseJsonBody(req); } catch(e) {}
         const database = loadDb();
 
+        const ride = (database.rides || []).find(r => r.id === rideId);
+        if (!ride) {
+            return sendJson(res, 404, { error: 'Ride not found.' });
+        }
+
         if (!user && body.userId) {
             user = database.users.find(u => u.id === body.userId);
+            if (!user) {
+                const pMatch = ride.passengers && ride.passengers.find(p => p.id === body.userId || p.userId === body.userId);
+                if (pMatch) {
+                    user = {
+                        id: pMatch.id,
+                        name: pMatch.name,
+                        reward_points: 100,
+                        role: 'CUSTOMER',
+                        created_at: new Date().toISOString()
+                    };
+                    database.users.push(user);
+                    saveDb();
+                }
+            }
         }
         if (!user) {
-            return sendJson(res, 401, { error: 'Authentication required to check in.' });
+            return sendJson(res, 401, { error: 'Authentication required to confirm attendance.' });
+        }
+
+        const curIdx = ride.current_stop_index || 0;
+        const curStop = ride.stops && ride.stops[curIdx];
+        const curPassenger = (ride.passengers && ride.passengers[curIdx]) || 
+                              (ride.passengers && ride.passengers.find(p => p.id === user.id || p.userId === user.id || p.name === user.name)) ||
+                              (ride.passengers && ride.passengers[0]);
+
+        const attendanceStatus = (body.status === 'ABSENT' || body.action === 'ABSENT') ? 'ABSENT' : 'PRESENT';
+        const nowIso = new Date().toISOString();
+
+        if (curPassenger) {
+            curPassenger.attendance_status = attendanceStatus;
+            curPassenger.status = attendanceStatus;
+            if (attendanceStatus === 'PRESENT') {
+                curPassenger.check_in_at = nowIso;
+            } else {
+                curPassenger.absence_finalized_at = nowIso;
+            }
         }
 
         if (!Array.isArray(database.ride_participants)) database.ride_participants = [];
         let participant = database.ride_participants.find(rp => rp.ride_id === rideId && rp.user_id === user.id);
-        const checkInTime = new Date().toISOString();
 
         if (!participant) {
             participant = {
@@ -2103,45 +2158,107 @@ const server = http.createServer(async (req, res) => {
                 user_id: user.id,
                 name: user.name,
                 commitment_status: 'COMMITTED',
-                attendance_status: 'PRESENT',
-                check_in_at: checkInTime,
-                absence_finalized_at: null,
-                created_at: checkInTime
+                attendance_status: attendanceStatus,
+                check_in_at: attendanceStatus === 'PRESENT' ? nowIso : null,
+                absence_finalized_at: attendanceStatus === 'ABSENT' ? nowIso : null,
+                created_at: nowIso
             };
             database.ride_participants.push(participant);
         } else {
-            participant.attendance_status = 'PRESENT';
-            participant.check_in_at = checkInTime;
-        }
-
-        // Also sync ride.participants if present
-        const ride = (database.rides || []).find(r => r.id === rideId);
-        if (ride && Array.isArray(ride.participants)) {
-            const ridePart = ride.participants.find(p => p.id === user.id || p.userId === user.id);
-            if (ridePart) {
-                ridePart.attendance_status = 'PRESENT';
-                ridePart.check_in_at = checkInTime;
+            participant.attendance_status = attendanceStatus;
+            if (attendanceStatus === 'PRESENT') {
+                participant.check_in_at = nowIso;
+            } else {
+                participant.absence_finalized_at = nowIso;
             }
         }
 
-        saveDb();
+        // Also sync ride.participants if present
+        if (Array.isArray(ride.participants)) {
+            const ridePart = ride.participants.find(p => p.id === user.id || p.userId === user.id);
+            if (ridePart) {
+                ridePart.attendance_status = attendanceStatus;
+                if (attendanceStatus === 'PRESENT') {
+                    ridePart.check_in_at = nowIso;
+                } else {
+                    ridePart.absence_finalized_at = nowIso;
+                }
+            }
+        }
 
-        broadcastEvent('ATTENDANCE_UPDATED', {
-            rideId,
-            userId: user.id,
-            status: 'PRESENT',
-            checkInAt: checkInTime
-        });
+        let pointsDeducted = 0;
+        if (attendanceStatus === 'PRESENT') {
+            broadcastEvent('PASSENGER_MARKED_PRESENT', {
+                rideId: ride.id,
+                stopIndex: curIdx,
+                passengerId: user.id,
+                passengerName: user.name,
+                status: 'PRESENT',
+                timestamp: nowIso
+            });
 
-        return sendJson(res, 200, {
-            success: true,
-            status: 'PRESENT',
-            message: "You're checked in.",
-            reward_points_deducted: 0,
-            rideId,
-            userId: user.id,
-            checkInAt: checkInTime
-        });
+            broadcastEvent('ATTENDANCE_UPDATED', {
+                rideId,
+                userId: user.id,
+                status: 'PRESENT',
+                checkInAt: nowIso
+            });
+
+            saveDb();
+
+            return sendJson(res, 200, {
+                success: true,
+                status: 'PRESENT',
+                message: "You're marked as present.",
+                reward_points_deducted: 0,
+                rideId,
+                userId: user.id,
+                checkInAt: nowIso
+            });
+        } else {
+            // Confirmed ride participant absent at pickup stop -> idempotent -5 deduction (Prompts #5, #6, #11)
+            const deductionRes = applyNoShowRewardDeduction(user.id, ride.id, 'Confirmed ride participant absent at pickup stop');
+            pointsDeducted = deductionRes.idempotent ? 0 : 5;
+
+            broadcastEvent('PASSENGER_MARKED_ABSENT', {
+                rideId: ride.id,
+                stopIndex: curIdx,
+                passengerId: user.id,
+                passengerName: user.name,
+                status: 'ABSENT',
+                pointsDeducted: 5,
+                timestamp: nowIso
+            });
+
+            broadcastEvent('REWARD_UPDATED', {
+                userId: user.id,
+                reward_points: user.reward_points,
+                pointsChange: -5,
+                reason: 'Confirmed ride participant absent at pickup stop',
+                timestamp: nowIso
+            });
+
+            broadcastEvent('ATTENDANCE_UPDATED', {
+                rideId,
+                userId: user.id,
+                status: 'ABSENT',
+                pointsDeducted: 5,
+                absenceFinalizedAt: nowIso
+            });
+
+            saveDb();
+
+            return sendJson(res, 200, {
+                success: true,
+                status: 'ABSENT',
+                message: 'Ride attendance marked as absent. 5 reward points deducted.',
+                reward_points_deducted: pointsDeducted,
+                new_balance: user.reward_points,
+                rideId,
+                userId: user.id,
+                absenceFinalizedAt: nowIso
+            });
+        }
     }
 
     // ----------------------------------------------------
@@ -2447,10 +2564,12 @@ const server = http.createServer(async (req, res) => {
             today_earnings: 480
         };
 
+        const forceReset = urlParams.get('reset') === 'true';
         // Find active assigned ride for this driver
-        let activeRide = (database.rides || []).find(r => 
+        let activeRide = forceReset ? null : (database.rides || []).find(r => 
             (r.driver_id === driver.id || (driver.name && r.driver_name && r.driver_name.includes(driver.name))) &&
-            r.status !== 'RIDE_COMPLETED' && r.status !== 'CANCELLED' && Array.isArray(r.passengers) && r.passengers.length > 0
+            r.status !== 'RIDE_COMPLETED' && r.status !== 'CANCELLED' && Array.isArray(r.passengers) && r.passengers.length > 0 &&
+            (r.current_stop_index || 0) < (r.stops ? r.stops.length : 4)
         );
 
         if (!activeRide) {
@@ -2481,7 +2600,8 @@ const server = http.createServer(async (req, res) => {
                         dropoff: 'Pari Chowk Metro',
                         distanceKm: 4.0,
                         fare: 20,
-                        status: 'WAITING'
+                        status: 'WAITING',
+                        attendance_status: 'WAITING'
                     },
                     {
                         id: 'usr_p2_riya',
@@ -2491,7 +2611,8 @@ const server = http.createServer(async (req, res) => {
                         dropoff: 'Pari Chowk Metro',
                         distanceKm: 6.0,
                         fare: 30,
-                        status: 'WAITING'
+                        status: 'WAITING',
+                        attendance_status: 'WAITING'
                     },
                     {
                         id: 'usr_p3_rahul',
@@ -2501,7 +2622,8 @@ const server = http.createServer(async (req, res) => {
                         dropoff: 'Pari Chowk Metro',
                         distanceKm: 10.0,
                         fare: 50,
-                        status: 'WAITING'
+                        status: 'WAITING',
+                        attendance_status: 'WAITING'
                     }
                 ],
                 stops: [
@@ -2511,10 +2633,13 @@ const server = http.createServer(async (req, res) => {
                     { order: 4, type: 'DROPOFF', passengerName: 'All Passengers', passenger_name: 'All Passengers', location: 'Pari Chowk Metro', pickup_location: 'Pari Chowk Metro', lat: 28.4682, lng: 77.5117, status: 'PENDING', etaText: '14 min' }
                 ]
             };
-            if (!database.rides.some(r => r.id === activeRide.id)) {
+            const existingIdx = database.rides.findIndex(r => r.id === activeRide.id);
+            if (existingIdx >= 0) {
+                database.rides[existingIdx] = activeRide;
+            } else {
                 database.rides.push(activeRide);
-                saveDb();
             }
+            saveDb();
         }
 
         if (activeRide) {
@@ -2555,23 +2680,119 @@ const server = http.createServer(async (req, res) => {
         let ride = database.rides.find(r => r.id === rideId);
         if (!ride) return sendJson(res, 404, { error: 'Ride not found' });
 
+        if (action === 'RESET') {
+            ride.status = 'DRIVER_EN_ROUTE';
+            ride.current_stop_index = 0;
+            if (Array.isArray(ride.stops)) {
+                ride.stops.forEach((s, idx) => {
+                    s.status = idx === 0 ? 'NEXT' : 'PENDING';
+                });
+            }
+            if (Array.isArray(ride.passengers)) {
+                ride.passengers.forEach(p => {
+                    p.status = 'WAITING';
+                    p.attendance_status = 'WAITING';
+                });
+            }
+            saveDb();
+            return sendJson(res, 200, { success: true, ride });
+        }
+
         if (action === 'ACCEPT') {
             ride.status = 'DRIVER_EN_ROUTE';
             broadcastEvent('RIDE_STARTED', { rideId, status: ride.status });
-        } else if (action === 'ARRIVED') {
+        } else if (action === 'ARRIVED' || action === 'I_VE_ARRIVED') {
+            const authUser = getAuthenticatedUser(req);
+            let driver = (database.drivers || []).find(d => authUser && (d.user_id === authUser.id || d.id === authUser.driver_id || d.id === authUser.id)) || (database.drivers && database.drivers[0]);
+
+            // Validate driver owns this ride
+            if (ride.driver_id && driver && driver.id && ride.driver_id !== driver.id && !ride.driver_name?.includes(driver.name)) {
+                return sendJson(res, 403, { error: 'Unauthorized: You are not assigned to this ride.' });
+            }
+            if (ride.status === 'RIDE_COMPLETED' || ride.status === 'CANCELLED') {
+                return sendJson(res, 400, { error: 'Ride is no longer active.' });
+            }
+
+            const curIdx = ride.current_stop_index || 0;
+            const currentStop = ride.stops && ride.stops[curIdx];
+            if (!currentStop) {
+                return sendJson(res, 400, { error: 'No active stop found for this ride.' });
+            }
+
+            // Location validation (geofence) - Prompt #16
+            const driverLat = body.latitude ?? driver?.current_latitude;
+            const driverLng = body.longitude ?? driver?.current_longitude;
+            if (driverLat !== undefined && driverLng !== undefined && currentStop.lat !== undefined && currentStop.lng !== undefined && !body.bypassGeofence) {
+                const dist = calculateHaversineDistanceMeters(driverLat, driverLng, currentStop.lat, currentStop.lng);
+                if (dist > ARRIVAL_GEOFENCE_RADIUS_METERS) {
+                    return sendJson(res, 400, {
+                        error: "You're not close enough to mark this stop as arrived.",
+                        distanceMeters: Math.round(dist),
+                        maxAllowedMeters: ARRIVAL_GEOFENCE_RADIUS_METERS
+                    });
+                }
+            }
+
+            currentStop.status = 'ARRIVED';
             ride.status = 'ARRIVED';
-            if (ride.stops && ride.stops[ride.current_stop_index || 0]) {
-                ride.stops[ride.current_stop_index || 0].status = 'ARRIVED';
+
+            // Find current passenger for this stop
+            const curPassenger = (ride.passengers && ride.passengers[curIdx]) || 
+                                  (ride.passengers && ride.passengers.find(p => p.name === currentStop.passengerName || p.name === currentStop.passenger_name)) || null;
+
+            if (curPassenger) {
+                curPassenger.attendance_status = 'CHECK_IN_OPEN';
+                curPassenger.arrived_at = new Date().toISOString();
             }
-            broadcastEvent('STOP_UPDATED', { rideId, currentStopIndex: ride.current_stop_index, status: 'ARRIVED' });
-        } else if (action === 'PICKED_UP') {
+
+            // Sync ride_participants
+            if (curPassenger && Array.isArray(database.ride_participants)) {
+                let rp = database.ride_participants.find(p => p.ride_id === rideId && (p.user_id === curPassenger.id || p.name === curPassenger.name));
+                if (rp) {
+                    rp.attendance_status = 'CHECK_IN_OPEN';
+                }
+            }
+
+            const arrivalPayload = {
+                rideId: ride.id,
+                stopIndex: curIdx,
+                stopOrder: currentStop.order || (curIdx + 1),
+                passengerId: curPassenger ? curPassenger.id : null,
+                passengerName: curPassenger ? curPassenger.name : (currentStop.passengerName || currentStop.passenger_name),
+                pickupLocation: currentStop.pickup_location || currentStop.location,
+                timestamp: new Date().toISOString()
+            };
+
+            broadcastEvent('DRIVER_ARRIVED_AT_STOP', arrivalPayload);
+            broadcastEvent('ATTENDANCE_OPENED', arrivalPayload);
+            broadcastEvent('STOP_UPDATED', { rideId, currentStopIndex: curIdx, status: 'ARRIVED', passenger: curPassenger });
+        } else if (action === 'PICKED_UP' || action === 'NEXT_STOP') {
             const idx = ride.current_stop_index || 0;
-            if (ride.stops && ride.stops[idx]) {
-                ride.stops[idx].status = 'PICKED_UP';
+            const curStop = ride.stops && ride.stops[idx];
+            const curPassenger = ride.passengers && ride.passengers[idx];
+
+            if (action === 'PICKED_UP') {
+                if (curStop) curStop.status = 'PICKED_UP';
+                if (curPassenger) {
+                    curPassenger.status = 'PICKED_UP';
+                    if (curPassenger.attendance_status !== 'ABSENT') {
+                        curPassenger.attendance_status = 'PRESENT';
+                    }
+                }
+                broadcastEvent('PASSENGER_PICKED_UP', {
+                    rideId,
+                    stopIndex: idx,
+                    passengerId: curPassenger?.id,
+                    passengerName: curPassenger?.name,
+                    timestamp: new Date().toISOString()
+                });
+            } else if (action === 'NEXT_STOP') {
+                if (curStop) curStop.status = curPassenger?.attendance_status === 'ABSENT' ? 'SKIPPED_ABSENT' : 'PICKED_UP';
+                if (curPassenger && curPassenger.attendance_status !== 'ABSENT') {
+                    curPassenger.status = 'PICKED_UP';
+                }
             }
-            if (ride.passengers && ride.passengers[idx]) {
-                ride.passengers[idx].status = 'PICKED_UP';
-            }
+
             const nextIdx = idx + 1;
             ride.current_stop_index = nextIdx;
             if (ride.stops && ride.stops[nextIdx]) {
@@ -2580,7 +2801,7 @@ const server = http.createServer(async (req, res) => {
             if (nextIdx >= (ride.passengers ? ride.passengers.length : 3)) {
                 ride.status = 'IN_RIDE';
             }
-            broadcastEvent('STOP_UPDATED', { rideId, currentStopIndex: nextIdx, status: 'PICKED_UP' });
+            broadcastEvent('STOP_UPDATED', { rideId, currentStopIndex: nextIdx, status: 'NEXT' });
         } else if (action === 'START_RIDE') {
             ride.status = 'IN_RIDE';
             broadcastEvent('RIDE_STARTED', { rideId, status: ride.status });
