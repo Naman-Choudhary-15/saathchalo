@@ -2375,6 +2375,7 @@ const server = http.createServer(async (req, res) => {
                         id: 'drv_satish_sharma',
                         name: 'Satish Sharma'
                     };
+                    assignedDriver.active_ride_id = rideId;
 
                     const newRide = {
                         id: rideId,
@@ -3289,23 +3290,12 @@ const server = http.createServer(async (req, res) => {
             today_earnings: 480
         };
 
-        // Find latest active assigned ride for this driver, or active pool with confirmed participants
-        let activeRide = (database.rides || []).slice().reverse().find(r => 
-            (r.driver_id === driver.id || (driver.name && r.driver_name && r.driver_name.includes(driver.name))) &&
-            r.status !== 'RIDE_COMPLETED' && r.status !== 'CANCELLED' && Array.isArray(r.participants) && r.participants.length > 0 &&
-            (r.current_stop_index || 0) < (r.stops ? r.stops.length : 10)
-        );
-
-        if (!activeRide) {
-            // Find any active pool ride with real participants that needs driver assignment
-            activeRide = (database.rides || []).slice().reverse().find(r => 
-                r.status !== 'RIDE_COMPLETED' && r.status !== 'CANCELLED' && 
-                Array.isArray(r.participants) && r.participants.length > 0 &&
-                (r.current_stop_index || 0) < (r.stops ? r.stops.length : 10)
-            );
-            if (activeRide) {
-                activeRide.driver_id = driver.id;
-                activeRide.driver_name = driver.name;
+        // Find latest active assigned ride for this driver
+        let activeRide = null;
+        if (driver.active_ride_id) {
+            activeRide = (database.rides || []).find(r => r.id === driver.active_ride_id && r.status !== 'RIDE_COMPLETED' && r.status !== 'CANCELLED');
+            if (!activeRide) {
+                driver.active_ride_id = null;
                 saveDb();
             }
         }
@@ -3393,14 +3383,27 @@ const server = http.createServer(async (req, res) => {
     // ----------------------------------------------------
     // API: Driver Platform - Ride Actions (Accept, Arrived, Picked Up, Complete)
     // ----------------------------------------------------
-    if (pathname.startsWith('/api/driver/ride/') && pathname.endsWith('/action') && req.method === 'POST') {
-        const parts = pathname.split('/');
-        const rideId = parts[4];
-        const database = loadDb();
+    if (((pathname.startsWith('/api/driver/ride/') && pathname.endsWith('/action')) || pathname === '/api/driver/action' || pathname === '/api/driver/complete-ride') && req.method === 'POST') {
         const body = await parseJsonBody(req);
-        const { action } = body;
+        let rideId = body.rideId || body.ride_id;
+        if (!rideId && pathname.startsWith('/api/driver/ride/')) {
+            const parts = pathname.split('/');
+            rideId = parts[4];
+        }
+        const action = pathname === '/api/driver/complete-ride' ? 'COMPLETE_RIDE' : body.action;
+        const database = loadDb();
 
         let ride = database.rides.find(r => r.id === rideId);
+        if (!ride && (action === 'COMPLETE_RIDE' || !rideId)) {
+            // If rideId is omitted on complete-ride, complete the driver's active ride
+            const authUser = getAuthenticatedUser(req);
+            const driver = (database.drivers || []).find(d => authUser && (d.user_id === authUser.id || d.id === authUser.driver_id || d.id === authUser.id)) || (database.drivers && database.drivers[0]);
+            ride = (database.rides || []).slice().reverse().find(r => 
+                (r.driver_id === driver.id || (driver.name && r.driver_name && r.driver_name.includes(driver.name))) &&
+                r.status !== 'RIDE_COMPLETED' && r.status !== 'CANCELLED'
+            );
+            if (ride) rideId = ride.id;
+        }
         if (!ride) return sendJson(res, 404, { error: 'Ride not found' });
 
         if (action === 'RESET') {
@@ -3530,12 +3533,33 @@ const server = http.createServer(async (req, res) => {
             broadcastEvent('RIDE_STARTED', { rideId, status: ride.status });
         } else if (action === 'COMPLETE_RIDE') {
             ride.status = 'RIDE_COMPLETED';
+            ride.completed_at = new Date().toISOString();
             const driver = (database.drivers || []).find(d => d.id === ride.driver_id) || (database.drivers || [])[0];
             if (driver) {
                 driver.today_rides = (driver.today_rides || 0) + 1;
                 driver.today_earnings = (driver.today_earnings || 0) + (ride.total_vehicle_fare || 100);
+                driver.active_ride_id = null;
+                if (driver.status !== 'OFFLINE') {
+                    driver.status = 'ONLINE';
+                }
             }
-            broadcastEvent('RIDE_COMPLETED', { rideId, status: 'RIDE_COMPLETED' });
+            const vehicle = (database.vehicles || []).find(v => (driver && v.id === driver.vehicle_id) || v.assigned_ride_id === rideId);
+            if (vehicle) {
+                vehicle.assigned_ride_id = null;
+            }
+            // Update participant bookings to RIDE_COMPLETED while preserving history
+            (ride.participants || []).forEach(p => {
+                const b = (database.bookings || []).find(bk => bk.id === p.bookingId || bk.id === p.id || bk.user_id === (p.userId || p.user_id || p.id));
+                if (b && b.status !== 'CANCELLED') {
+                    b.status = 'RIDE_COMPLETED';
+                }
+            });
+            saveDb();
+            broadcastEvent('RIDE_COMPLETED', { rideId, status: 'RIDE_COMPLETED', driverId: driver ? driver.id : null });
+            broadcastEvent('DRIVER_RIDE_CLEARED', { driverId: driver ? driver.id : null, rideId });
+            broadcastEvent('DRIVER_AVAILABLE', { driverId: driver ? driver.id : null });
+            broadcastEvent('DEMAND_UPDATED', { sessionType: 'MORNING' });
+            return sendJson(res, 200, { success: true, ride: null, completedRide: ride, message: 'Ride completed successfully' });
         }
 
         ride.passengers_count = (ride.passengers || []).length;

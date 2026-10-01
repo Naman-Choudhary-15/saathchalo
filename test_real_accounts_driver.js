@@ -101,6 +101,9 @@ async function main() {
     const driverToken = driverLogin.data.token;
     const driverAuth = { 'Authorization': `Bearer ${driverToken}`, 'x-driver-token': 'tok_driver_satish' };
 
+    // Ensure driver has clean operational state at start
+    await request('POST', '/api/driver/complete-ride', {}, driverAuth);
+
     console.log(`✓ Customer Aditya: ${userAditya.name} (${userAditya.id})`);
     console.log(`✓ Customer Aman: ${userAman.name} (${userAman.id})`);
     console.log(`✓ Customer Rawat: ${userRawat.name} (${userRawat.id})`);

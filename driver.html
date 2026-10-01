@@ -789,14 +789,25 @@
                 // If action is ARRIVED, pass bypassGeofence for reliable judge demonstration
                 const extra = action === 'ARRIVED' ? { bypassGeofence: true } : {};
                 const res = await window.saathSupabase.sendDriverAction(currentRide.id, action, extra);
-                if (res && res.ride) {
+                if (action === 'COMPLETE_RIDE') {
+                    // Operational reset: clear all active ride state
+                    currentRide = null;
+                    renderDriverRideUI(null);
+                    if (driverMapInstance) {
+                        stopMarkers.forEach(m => driverMapInstance.removeLayer(m));
+                        stopMarkers = [];
+                        routePolylines.forEach(p => driverMapInstance.removeLayer(p));
+                        routePolylines = [];
+                        if (driverMarker) {
+                            try { driverMapInstance.panTo(driverMarker.getLatLng(), { animate: true }); } catch(e) {}
+                        }
+                    }
+                    alert('🎉 Shared Ride Completed! ₹100 has been credited to your daily earnings.');
+                    await loadDriverProfile();
+                    loadDriverDemandStats('MORNING');
+                } else if (res && res.ride) {
                     currentRide = res.ride;
                     renderDriverRideUI(currentRide);
-
-                    if (action === 'COMPLETE_RIDE') {
-                        alert('🎉 Shared Ride Completed! ₹100 has been credited to your daily earnings.');
-                        await loadDriverProfile();
-                    }
                 }
             } catch(err) {
                 console.error('Stop action error:', err);
@@ -899,6 +910,23 @@
             loadDriverCurrentRide();
             console.log('[SC REALTIME] DRIVER STATE UPDATED: Ride State Update');
         };
+        window.handleRideCompleted = (payload) => {
+            currentRide = null;
+            renderDriverRideUI(null);
+            if (driverMapInstance) {
+                stopMarkers.forEach(m => driverMapInstance.removeLayer(m));
+                stopMarkers = [];
+                routePolylines.forEach(p => driverMapInstance.removeLayer(p));
+                routePolylines = [];
+                if (driverMarker) {
+                    try { driverMapInstance.panTo(driverMarker.getLatLng(), { animate: true }); } catch(e) {}
+                }
+            }
+            loadDriverProfile();
+            loadDriverDemandStats('MORNING');
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Ride Completed & Cleared');
+        };
+        window.handleDriverRideCleared = window.handleRideCompleted;
         window.handleDriverStatusUpdate = (payload) => {
             if (payload && currentDriver && payload.driverId === currentDriver.id) {
                 updateDriverStatusUI(payload.status);

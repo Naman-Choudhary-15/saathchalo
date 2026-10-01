@@ -391,9 +391,12 @@ class SaathLiveService {
             if (typeof window.handleStopUpdate === 'function') {
                 window.handleStopUpdate(payload);
             }
-        } else if (type === 'RIDE_STARTED' || type === 'RIDE_COMPLETED') {
+        } else if (type === 'RIDE_STARTED' || type === 'RIDE_COMPLETED' || type === 'DRIVER_RIDE_CLEARED' || type === 'DRIVER_AVAILABLE') {
             if (typeof window.handleRideStateUpdate === 'function') {
                 window.handleRideStateUpdate(payload);
+            }
+            if ((type === 'RIDE_COMPLETED' || type === 'DRIVER_RIDE_CLEARED') && typeof window.handleRideCompleted === 'function') {
+                window.handleRideCompleted(payload);
             }
         } else if (type === 'DEMAND_UPDATED') {
             if (typeof window.handleDemandUpdated === 'function') {
