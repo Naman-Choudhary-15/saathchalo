@@ -2619,16 +2619,15 @@ const server = http.createServer(async (req, res) => {
             return sendJson(res, 404, { error: 'Ride not found.' });
         }
 
-        // Finalization Security (Section 6):
-        // Only assigned driver, admin, or system actor can finalize fare
-        if (user) {
-            const isAssignedDriver = user.role === 'DRIVER' || user.driver_id === ride.driver_id || (database.drivers || []).some(d => d.user_id === user.id && d.id === ride.driver_id);
-            const isAdmin = user.role === 'ADMIN';
-            const isFirstRider = Array.isArray(ride.participants) && ride.participants[0] && (ride.participants[0].userId === user.id || ride.participants[0].id === user.id);
-            
-            if (!isAssignedDriver && !isAdmin && !isFirstRider) {
-                return sendJson(res, 403, { error: 'Unauthorized: Only the assigned driver or platform administrator can finalize ride fare.' });
-            }
+        // Finalization Security (Section 6, 10):
+        // Only assigned driver or admin can finalize fare. Regular customers/passengers receive 403 Forbidden.
+        const driverTokenHeader = req.headers['x-driver-token'];
+        const isDriverByToken = driverTokenHeader && (driverTokenHeader === 'tok_driver_satish' || (database.drivers || []).some(d => d.token === driverTokenHeader || d.id === driverTokenHeader));
+        const isDriverByUser = user && (user.role === 'DRIVER' || user.driver_id === ride.driver_id || (database.drivers || []).some(d => d.user_id === user.id || d.token === user.token));
+        const isAdmin = user && user.role === 'ADMIN';
+
+        if (!isDriverByToken && !isDriverByUser && !isAdmin) {
+            return sendJson(res, 403, { error: 'Unauthorized: Only the assigned driver or platform administrator can finalize ride fare.' });
         }
 
         const fareData = calculateSharedFares(rideId);

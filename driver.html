@@ -797,8 +797,8 @@
         window.handleServiceAllocationUpdated = (payload) => {
             if (payload) updateDriverDemandUI(payload);
         };
-        window.handleBookingCreated = () => loadDriverDemandStats('MORNING');
-        window.handleBookingCancelled = () => loadDriverDemandStats('MORNING');
+        window.handleBookingCreated = () => { loadDriverDemandStats('MORNING'); loadDriverCurrentRide(); };
+        window.handleBookingCancelled = () => { loadDriverDemandStats('MORNING'); loadDriverCurrentRide(); };
         window.handlePoolUpdated = () => { loadDriverCurrentRide(); loadDriverDemandStats('MORNING'); };
         window.handleFareUpdated = () => { loadDriverCurrentRide(); };
         window.handleFareFinalized = () => { loadDriverCurrentRide(); };
