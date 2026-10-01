@@ -1488,7 +1488,7 @@ function renderCommunityRideConfirmedBanner(ride) {
                 </div>
                 <div>
                     <span class="text-gray-400">Estimated Fare:</span>
-                    <p class="font-bold text-brandYellow">₹${Number(ride.fare || 20).toFixed(2)}</p>
+                    <p class="font-bold text-brandYellow">₹${Math.round(Number(ride.fare || 20))}</p>
                 </div>
                 <div>
                     <span class="text-gray-400">Driver:</span>
@@ -4280,4 +4280,16 @@ if (typeof window !== 'undefined') {
     window.confirmPassengerAbsence = confirmPassengerAbsence;
     // Realtime driver vehicle tracking on customer map
     window.handleDriverLocationUpdate = handleDriverLocationUpdate;
+
+    // Realtime Fair Fare Update Handlers (Sections 20, 21)
+    window.handleFareUpdated = function(payload) {
+        if (window.appManager && typeof window.appManager.loadUserBookings === 'function') {
+            window.appManager.loadUserBookings();
+        }
+    };
+    window.handleFareFinalized = function(payload) {
+        if (window.appManager && typeof window.appManager.loadUserBookings === 'function') {
+            window.appManager.loadUserBookings();
+        }
+    };
 }

@@ -21,5 +21,8 @@
     "mobility"
   ],
   "author": "SAATHCHALO Team",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^25.12.0"
+  }
 }

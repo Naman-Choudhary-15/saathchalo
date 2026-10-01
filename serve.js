@@ -794,6 +794,182 @@ function calculateHaversineDistanceMeters(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
+/**
+ * FAIR FARE ENGINE — calculateSharedFares(rideId)
+ * Authoritative backend function to calculate or retrieve frozen distance-proportional shared fares.
+ * 
+ * 1. Loads ride & vehicle
+ * 2. Loads confirmed participants
+ * 3. Obtains total vehicle fare
+ * 4. Calculates each participant's journey distance
+ * 5. Applies fair distance ratio: fare_i = TOTAL_VEHICLE_FARE * (d_i / D)
+ * 6. Reconciles whole-rupee rounding: SUM(fares) === TOTAL_VEHICLE_FARE
+ * 7. Persists personal fares to database (bookings & ride participants)
+ * 8. Freezes fare once finalized
+ */
+function calculateSharedFares(rideId) {
+    if (!rideId) return null;
+    const database = loadDb();
+    const ride = (database.rides || []).find(r => r.id === rideId);
+    if (!ride) return null;
+
+    // If ride fare is frozen / finalized, return immutable snapshot
+    if (ride.fare_finalized && Array.isArray(ride.participants) && ride.participants.length > 0) {
+        return {
+            rideId: ride.id,
+            totalVehicleFare: Math.round(ride.total_vehicle_fare || 0),
+            currency: 'INR',
+            vehicleType: ride.vehicle_type,
+            fuelType: ride.fuel_type,
+            vehicleTitle: ride.vehicle_title || `${ride.vehicle_type} • ${ride.fuel_type}`,
+            participants: ride.participants.map(p => ({
+                userId: p.userId || p.user_id || p.id,
+                name: p.name || 'Passenger',
+                pickup: p.pickup,
+                dropoff: p.dropoff,
+                journeyDistance: parseFloat(p.journeyDistance || p.distanceKm || p.distance || 1.0),
+                fareAmount: Math.round(p.fareAmount || p.fare || 0),
+                fare: Math.round(p.fareAmount || p.fare || 0)
+            })),
+            finalized: true,
+            calculated_at: ride.calculated_at || ride.fare_frozen_at || new Date().toISOString()
+        };
+    }
+
+    // Load active confirmed bookings for this ride
+    const confirmedBookings = (database.bookings || []).filter(b => b.ride_id === rideId && b.status !== 'CANCELLED');
+    
+    // Construct real participant list
+    let participants = [];
+    if (Array.isArray(ride.participants) && ride.participants.length > 0) {
+        for (const p of ride.participants) {
+            const uid = p.userId || p.user_id || p.id;
+            const b = confirmedBookings.find(cb => cb.user_id === uid || cb.id === uid);
+            const dist = parseFloat(p.journeyDistance || p.distanceKm || (b ? b.distance_km || b.distanceKm : 7.4));
+            participants.push({
+                ...p,
+                id: uid,
+                userId: uid,
+                user_id: uid,
+                name: p.name || (b ? b.name || b.user_name : 'Passenger'),
+                pickup: p.pickup || (b ? b.pickup : ride.pickup),
+                dropoff: p.dropoff || (b ? b.dropoff : ride.destination),
+                journeyDistance: dist,
+                distanceKm: dist,
+                distance: dist
+            });
+        }
+    } else if (confirmedBookings.length > 0) {
+        participants = confirmedBookings.map(b => {
+            const dist = parseFloat(b.distance_km || b.distanceKm || b.distance || 7.4);
+            return {
+                id: b.user_id,
+                userId: b.user_id,
+                user_id: b.user_id,
+                name: b.name || b.user_name || 'Passenger',
+                pickup: b.pickup || ride.pickup,
+                dropoff: b.dropoff || ride.destination,
+                journeyDistance: dist,
+                distanceKm: dist,
+                distance: dist
+            };
+        });
+    }
+
+    if (participants.length === 0) {
+        return {
+            rideId: ride.id,
+            totalVehicleFare: Math.round(ride.total_vehicle_fare || 0),
+            currency: 'INR',
+            vehicleType: ride.vehicle_type,
+            fuelType: ride.fuel_type,
+            vehicleTitle: ride.vehicle_title,
+            participants: [],
+            finalized: false
+        };
+    }
+
+    // Vehicle allocation based on participant count & fuel type
+    const riderCount = participants.length;
+    const fuelPref = ride.fuel_type || 'EV';
+    const allocation = allocateVehicleForCount(riderCount, fuelPref);
+
+    ride.vehicle_type = allocation.vehicleType;
+    ride.fuel_type = allocation.fuelType;
+    ride.vehicle_title = `${allocation.vehicleType} • ${allocation.fuelType}`;
+    ride.capacity = allocation.capacity;
+    ride.rider_count = riderCount;
+
+    // Calculate total vehicle fare (one single vehicle fare for the trip)
+    const maxDist = Math.max(...participants.map(p => parseFloat(p.journeyDistance || p.distanceKm || 7.4)));
+    const totalVehicleFare = ride.total_vehicle_fare && ride.total_vehicle_fare > 0 && ride.total_vehicle_fare !== 100
+        ? Math.round(ride.total_vehicle_fare)
+        : calculateTotalVehicleFare(allocation.type, allocation.fuelType, maxDist);
+    ride.total_vehicle_fare = totalVehicleFare;
+
+    // Distribute total vehicle fare based on individual journey distances
+    const distributed = calculateSharedFare(totalVehicleFare, participants);
+    const now = new Date().toISOString();
+
+    ride.participants = distributed.map(p => ({
+        ...p,
+        calculated_at: now,
+        vehicle_type: ride.vehicle_type,
+        fuel_type: ride.fuel_type
+    }));
+
+    // Update passengers array for driver stops view
+    ride.passengers = ride.participants.map(p => ({
+        id: p.userId,
+        name: p.name,
+        pickup: p.pickup,
+        dropoff: p.dropoff,
+        distanceKm: p.journeyDistance,
+        fare: p.fare,
+        fareAmount: p.fare,
+        status: p.status || 'WAITING',
+        attendance_status: p.attendance_status || 'WAITING'
+    }));
+
+    // Update corresponding database bookings
+    for (const part of distributed) {
+        const existingBooking = (database.bookings || []).find(b => (b.user_id === part.userId || b.id === part.userId) && b.ride_id === ride.id && b.status !== 'CANCELLED');
+        if (existingBooking) {
+            existingBooking.fare = part.fare;
+            existingBooking.fare_amount = part.fare;
+            existingBooking.display_fare = '₹' + part.fare;
+            existingBooking.journey_distance = part.journeyDistance;
+            existingBooking.distance_km = part.journeyDistance;
+            existingBooking.vehicle_type = `${allocation.vehicleType} • ${allocation.fuelType}`;
+            existingBooking.fuel_type = allocation.fuelType;
+            existingBooking.calculated_at = now;
+        }
+    }
+
+    ride.calculated_at = now;
+    saveDb();
+
+    return {
+        rideId: ride.id,
+        totalVehicleFare: totalVehicleFare,
+        currency: 'INR',
+        vehicleType: ride.vehicle_type,
+        fuelType: ride.fuel_type,
+        vehicleTitle: ride.vehicle_title,
+        participants: ride.participants.map(p => ({
+            userId: p.userId,
+            name: p.name,
+            pickup: p.pickup,
+            dropoff: p.dropoff,
+            journeyDistance: p.journeyDistance,
+            fareAmount: p.fare,
+            fare: p.fare
+        })),
+        finalized: !!ride.fare_finalized,
+        calculated_at: now
+    };
+}
+
 // Centralized Idempotent Reward Deduction Service (Section 28)
 function applyNoShowRewardDeduction(userId, rideId, reason = 'Confirmed community ride not attended') {
     const database = loadDb();
@@ -2070,7 +2246,7 @@ const server = http.createServer(async (req, res) => {
                     matchedRide.participants = fareDistribution;
 
                     const myAllocated = fareDistribution.find(p => p.userId === user.id || p.id === user.id);
-                    finalPassengerFare = myAllocated ? myAllocated.fare : calculateVehicleFare(newAllocation.type, distanceKm, totalPoolRiders, newAllocation.fuelType);
+                    finalPassengerFare = myAllocated ? myAllocated.fare : totalRideFare;
 
                     allocatedVehicleType = newAllocation.vehicleType;
                     allocatedFuelType = newAllocation.fuelType;
@@ -2078,9 +2254,12 @@ const server = http.createServer(async (req, res) => {
 
                     // Update corresponding participant bookings in database
                     for (const part of fareDistribution) {
-                        const existingB = database.bookings.find(b => b.user_id === part.userId && b.ride_id === matchedRide.id);
+                        const existingB = database.bookings.find(b => (b.user_id === part.userId || b.id === part.userId) && b.ride_id === matchedRide.id);
                         if (existingB) {
                             existingB.fare = part.fare;
+                            existingB.fare_amount = part.fare;
+                            existingB.display_fare = '₹' + part.fare;
+                            existingB.journey_distance = part.journeyDistance;
                             existingB.vehicle_type = `${newAllocation.vehicleType} • ${newAllocation.fuelType}`;
                         }
                     }
@@ -2094,7 +2273,7 @@ const server = http.createServer(async (req, res) => {
                     vehicleNumber = allocation.platePrefix + Math.floor(1000 + Math.random() * 9000);
 
                     const totalRideFare = calculateTotalVehicleFare(allocation.type, allocation.fuelType, distanceKm);
-                    finalPassengerFare = calculateVehicleFare(allocation.type, distanceKm, 1, allocation.fuelType);
+                    finalPassengerFare = totalRideFare; // Section 8: Single passenger pays full total vehicle fare
 
                     const newRide = {
                         id: rideId,
@@ -2116,9 +2295,12 @@ const server = http.createServer(async (req, res) => {
                         participants: [{
                             id: user.id,
                             userId: user.id,
+                            user_id: user.id,
                             name: user.name,
                             distanceKm: distanceKm,
+                            journeyDistance: distanceKm,
                             fare: finalPassengerFare,
+                            fareAmount: finalPassengerFare,
                             pickup: pickup,
                             dropoff: dropoff
                         }],
@@ -2156,10 +2338,12 @@ const server = http.createServer(async (req, res) => {
                     pickup: pickup,
                     dropoff: dropoff,
                     distance_km: distanceKm,
+                    journey_distance: distanceKm,
                     vehicle_type: `${allocatedVehicleType} • ${allocatedFuelType}`,
                     vehicle_id: vehicleNumber,
                     fuel_type: allocatedFuelType,
                     fare: finalPassengerFare,
+                    fare_amount: finalPassengerFare,
                     display_fare: '₹' + Math.round(finalPassengerFare),
                     session_type: sessionType,
                     status: 'CONFIRMED',
@@ -2191,8 +2375,10 @@ const server = http.createServer(async (req, res) => {
                         avatar: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
                         pickup: p.pickup,
                         dropoff: p.dropoff,
-                        distanceKm: p.distanceKm || 4.0,
+                        distanceKm: p.journeyDistance || p.distanceKm || 4.0,
+                        journeyDistance: p.journeyDistance || p.distanceKm || 4.0,
                         fare: p.fare,
+                        fareAmount: p.fare,
                         status: 'WAITING',
                         attendance_status: 'WAITING'
                     }));
@@ -2250,6 +2436,11 @@ const server = http.createServer(async (req, res) => {
                 database.bookings.push(newBooking);
                 saveDb();
 
+                // Recalculate and persist fair distance-ratio fare snapshot
+                if (targetRide) {
+                    calculateSharedFares(targetRide.id);
+                }
+
                 const demandStats = getSessionDemandStats(sessionType);
                 broadcastEvent('BOOKING_CREATED', {
                     booking: newBooking,
@@ -2267,6 +2458,12 @@ const server = http.createServer(async (req, res) => {
                         ride: targetRide,
                         sessionType
                     });
+                    broadcastEvent('FARE_UPDATED', {
+                        rideId: targetRide.id,
+                        totalVehicleFare: targetRide.total_vehicle_fare,
+                        currency: 'INR',
+                        participants: targetRide.participants
+                    });
                 }
                 broadcastEvent('CONNECTED_USERS_UPDATE', getLiveCommunityStats());
 
@@ -2279,6 +2476,49 @@ const server = http.createServer(async (req, res) => {
                 return sendJson(res, 500, { error: e.message });
             }
         }
+    }
+
+    // ----------------------------------------------------
+    // API: Authoritative Shared Fare Endpoint (Sections 6, 22)
+    // ----------------------------------------------------
+    if ((pathname.startsWith('/api/rides/') || pathname.startsWith('/api/ride/')) && pathname.endsWith('/fare') && req.method === 'GET') {
+        const parts = pathname.split('/');
+        const rideId = parts[3];
+        const fareData = calculateSharedFares(rideId);
+        if (!fareData) {
+            return sendJson(res, 404, { error: 'Ride not found or fare cannot be calculated.' });
+        }
+        return sendJson(res, 200, fareData);
+    }
+
+    // ----------------------------------------------------
+    // API: Finalize & Freeze Shared Fare Endpoint (Section 14)
+    // ----------------------------------------------------
+    if ((pathname.startsWith('/api/rides/') || pathname.startsWith('/api/ride/')) && pathname.endsWith('/finalize-fare') && req.method === 'POST') {
+        const parts = pathname.split('/');
+        const rideId = parts[3];
+        const database = loadDb();
+        const ride = (database.rides || []).find(r => r.id === rideId);
+        if (!ride) {
+            return sendJson(res, 404, { error: 'Ride not found.' });
+        }
+
+        const fareData = calculateSharedFares(rideId);
+        ride.fare_finalized = true;
+        ride.fare_frozen_at = new Date().toISOString();
+        saveDb();
+
+        broadcastEvent('FARE_FINALIZED', {
+            rideId: ride.id,
+            fareData: { ...fareData, finalized: true }
+        });
+        broadcastEvent('POOL_UPDATED', { ride });
+
+        return sendJson(res, 200, {
+            success: true,
+            message: 'Shared fare finalized and frozen.',
+            fareData: { ...fareData, finalized: true }
+        });
     }
 
     // ----------------------------------------------------
@@ -2326,7 +2566,17 @@ const server = http.createServer(async (req, res) => {
                 if (Array.isArray(ride.stops)) {
                     ride.stops = ride.stops.filter(s => s.passengerName !== user.name);
                 }
+                // Recalculate remaining participants' fares
+                if (ride.participants.length > 0 && !ride.fare_finalized) {
+                    calculateSharedFares(ride.id);
+                }
                 broadcastEvent('POOL_UPDATED', { ride, sessionType });
+                broadcastEvent('FARE_UPDATED', {
+                    rideId: ride.id,
+                    totalVehicleFare: ride.total_vehicle_fare,
+                    currency: 'INR',
+                    participants: ride.participants
+                });
             }
         }
 

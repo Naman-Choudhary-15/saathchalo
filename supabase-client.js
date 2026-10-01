@@ -406,6 +406,14 @@ class SaathLiveService {
             if (typeof window.handlePoolUpdated === 'function') {
                 window.handlePoolUpdated(payload);
             }
+        } else if (type === 'FARE_UPDATED') {
+            if (typeof window.handleFareUpdated === 'function') {
+                window.handleFareUpdated(payload);
+            }
+        } else if (type === 'FARE_FINALIZED') {
+            if (typeof window.handleFareFinalized === 'function') {
+                window.handleFareFinalized(payload);
+            }
         } else if (type === 'VEHICLE_ASSIGNED') {
             if (typeof window.handleVehicleAssigned === 'function') {
                 window.handleVehicleAssigned(payload);
@@ -1005,6 +1013,22 @@ class SaathLiveService {
             method: 'POST',
             headers,
             body: JSON.stringify({ userId: this.currentUser?.id })
+        });
+    }
+
+    async getRideFare(rideId) {
+        return await this.safeFetchJson(`/api/rides/${rideId}/fare`, {
+            headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {}
+        });
+    }
+
+    async finalizeRideFare(rideId) {
+        return await this.safeFetchJson(`/api/rides/${rideId}/finalize-fare`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {})
+            }
         });
     }
 

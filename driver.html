@@ -568,6 +568,10 @@
             document.getElementById('currentStopLocationText').innerHTML = `<i class="fa-solid fa-location-dot text-brandYellow"></i> ${currentStop ? (currentStop.pickup_location || currentStop.location) : 'Destination'}`;
             document.getElementById('currentStopEtaBadge').innerText = currentStop ? currentStop.etaText : '12 min';
 
+            const totalFareVal = Math.round(ride.total_vehicle_fare || ride.totalFare || 100);
+            const totalFareBadge = document.getElementById('rideTotalFareText');
+            if (totalFareBadge) totalFareBadge.innerText = `₹${totalFareVal} Total`;
+
             // Google Maps Deep Link (Prompt #42)
             const navLink = document.getElementById('btnNavigateGoogleMaps');
             if (navLink && currentStop) {
@@ -579,6 +583,10 @@
             const btnComplete = document.getElementById('btnCompleteTrip');
             const btnPickedUp = document.getElementById('btnPickedUpStop');
             const btnArrived = document.getElementById('btnArrivedAtStop');
+
+            if (btnComplete) {
+                btnComplete.innerHTML = `<i class="fa-solid fa-flag-checkered"></i> <span>COMPLETE SHARED TRIP (₹${totalFareVal})</span>`;
+            }
 
             if (currentIdx >= (ride.passengers ? ride.passengers.length : 3)) {
                 btnComplete.classList.remove('hidden');
@@ -651,6 +659,9 @@
                     statusBadge = '<span class="text-[10px] font-bold text-brandYellow bg-brandYellow/15 border border-brandYellow/30 px-2 py-0.5 rounded-full animate-pulse">NEXT STOP</span>';
                 }
 
+                const distKm = p.journeyDistance || p.distanceKm || p.distance || 0;
+                const fareAmount = Math.round(p.fareAmount || p.fare || 0);
+
                 return `
                     <div class="p-3.5 rounded-2xl border ${isCurrent ? 'bg-gray-800/90 border-brandYellow shadow-md' : 'bg-gray-900/60 border-gray-800'} flex items-center justify-between transition">
                         <div class="flex items-center gap-3">
@@ -662,7 +673,7 @@
                         </div>
                         <div class="text-right">
                             ${statusBadge}
-                            <p class="text-xs font-black text-white mt-1">₹${p.fare}</p>
+                            <p class="text-xs font-black text-white mt-1">₹${fareAmount}</p>
                         </div>
                     </div>
                 `;
@@ -789,6 +800,8 @@
         window.handleBookingCreated = () => loadDriverDemandStats('MORNING');
         window.handleBookingCancelled = () => loadDriverDemandStats('MORNING');
         window.handlePoolUpdated = () => { loadDriverCurrentRide(); loadDriverDemandStats('MORNING'); };
+        window.handleFareUpdated = () => { loadDriverCurrentRide(); };
+        window.handleFareFinalized = () => { loadDriverCurrentRide(); };
         window.handleVehicleAssigned = () => { loadDriverCurrentRide(); loadDriverDemandStats('MORNING'); };
         window.handleStopUpdate = () => loadDriverCurrentRide();
         window.handleRideStateUpdate = () => loadDriverCurrentRide();

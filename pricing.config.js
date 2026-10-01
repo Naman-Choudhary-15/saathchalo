@@ -62,6 +62,13 @@ const VEHICLE_FARE_CONFIG = {
             label: 'Traveller • CNG',
             fuelName: 'CNG',
             speedKmh: 45
+        },
+        PETROL: {
+            baseFare: 35,
+            perKm: 7.5,
+            label: 'Traveller • Petrol',
+            fuelName: 'Petrol',
+            speedKmh: 45
         }
     },
     BUS: {
@@ -77,6 +84,13 @@ const VEHICLE_FARE_CONFIG = {
             perKm: 3.5,
             label: 'Bus • CNG',
             fuelName: 'CNG',
+            speedKmh: 40
+        },
+        PETROL: {
+            baseFare: 18,
+            perKm: 4.2,
+            label: 'Bus • Petrol',
+            fuelName: 'Petrol',
             speedKmh: 40
         }
     }
@@ -123,11 +137,11 @@ const VEHICLE_PRICING = {
 };
 
 /**
- * Calculates the total vehicle fare for a given trip
+ * Calculates the total vehicle fare for a given trip in whole rupees
  * @param {string} vehicleType - 'AUTO', 'TRAVELLER', or 'BUS'
  * @param {string} fuelType - 'EV', 'CNG', or 'PETROL'
  * @param {number} distanceKm - Total trip corridor distance in km
- * @returns {number} Total vehicle trip cost F
+ * @returns {number} Total vehicle trip cost F (integer rupees)
  */
 function calculateTotalVehicleFare(vehicleType, fuelType = 'CNG', distanceKm = 7.4) {
     const vKey = (vehicleType || 'AUTO').toUpperCase().includes('BUS') ? 'BUS'
@@ -140,75 +154,126 @@ function calculateTotalVehicleFare(vehicleType, fuelType = 'CNG', distanceKm = 7
     const dist = Math.max(1.0, parseFloat(distanceKm) || 1.0);
 
     const totalFare = config.baseFare + (config.perKm * dist);
-    return Math.round(totalFare * 100) / 100;
+    return Math.round(totalFare);
 }
 
 /**
- * FAIR FARE ENGINE — Section 32, 33, 34, 35, 36, 37
+ * FAIR FARE ENGINE
  * Distributes total vehicle fare F proportionally based on each passenger's journey distance.
  * 
  * Formula:
  * D = sum(di)
  * fare_i = F * (di / D)
- * Deterministic rounding reconciliation ensures sum(fare_i) === F.
+ * 
+ * Deterministic whole-rupee rounding reconciliation guarantees:
+ * SUM(fare_i) === F strictly.
  * 
  * @param {number} totalVehicleFare - F (e.g. ₹100)
- * @param {Array<{id: string, distanceKm: number}>} passengers - List of passengers with their journey distance
- * @returns {Array<{id: string, distanceKm: number, fare: number}>}
+ * @param {Array<{id: string, userId?: string, distanceKm?: number, journeyDistance?: number, distance?: number}>} passengers
+ * @returns {Array<{id: string, userId: string, journeyDistance: number, distanceKm: number, fare: number, fareAmount: number}>}
  */
 function calculateSharedFare(totalVehicleFare, passengers) {
     if (!Array.isArray(passengers) || passengers.length === 0) {
         return [];
     }
 
-    const F = Math.round((parseFloat(totalVehicleFare) || 0) * 100) / 100;
+    const F = Math.round(parseFloat(totalVehicleFare) || 0);
 
     if (passengers.length === 1) {
+        const p = passengers[0];
+        const uid = p.userId || p.user_id || p.id;
+        const d = parseFloat(p.journeyDistance || p.distanceKm || p.distance || 1.0);
         return [{
-            ...passengers[0],
-            fare: F
+            ...p,
+            id: p.id || uid,
+            userId: uid,
+            user_id: uid,
+            name: p.name || p.userName || 'Passenger',
+            journeyDistance: d,
+            distanceKm: d,
+            distance: d,
+            fare: F,
+            fareAmount: F
         }];
     }
 
-    const totalD = passengers.reduce((sum, p) => sum + (parseFloat(p.distanceKm || p.distance || 1.0)), 0);
+    const totalD = passengers.reduce((sum, p) => sum + (parseFloat(p.journeyDistance || p.distanceKm || p.distance || 1.0)), 0);
 
     if (totalD <= 0) {
-        const equalSplit = Math.round((F / passengers.length) * 100) / 100;
-        return passengers.map(p => ({ ...p, fare: equalSplit }));
+        const equalSplit = Math.floor(F / passengers.length);
+        let rem = F - (equalSplit * passengers.length);
+        return passengers.map((p, idx) => {
+            const uid = p.userId || p.user_id || p.id;
+            const fare = equalSplit + (idx < rem ? 1 : 0);
+            return {
+                ...p,
+                id: p.id || uid,
+                userId: uid,
+                user_id: uid,
+                name: p.name || p.userName || 'Passenger',
+                journeyDistance: 1.0,
+                distanceKm: 1.0,
+                distance: 1.0,
+                fare: fare,
+                fareAmount: fare
+            };
+        });
     }
 
-    let allocatedSum = 0;
-    const results = passengers.map(p => {
-        const d = parseFloat(p.distanceKm || p.distance || 1.0);
-        const rawFare = F * (d / totalD);
-        const roundedFare = Math.round(rawFare * 100) / 100;
-        allocatedSum += roundedFare;
+    // Proportional calculation: fare_i = F * (d_i / D)
+    // Largest Remainder Method (Hare-Niemeyer) for clean, fair whole-rupee distribution
+    const rawItems = passengers.map(p => {
+        const uid = p.userId || p.user_id || p.id;
+        const d = parseFloat(p.journeyDistance || p.distanceKm || p.distance || 1.0);
+        const ratio = d / totalD;
+        const exactFare = F * ratio;
+        const baseFare = Math.floor(exactFare);
+        const remainder = exactFare - baseFare;
         return {
-            ...p,
-            rawFare,
-            fare: roundedFare
+            passenger: p,
+            userId: uid,
+            distance: d,
+            ratio: ratio,
+            exactFare: exactFare,
+            baseFare: baseFare,
+            remainder: remainder
         };
     });
 
-    // Reconcile deterministic rounding so sum(fares) === F precisely
-    allocatedSum = Math.round(allocatedSum * 100) / 100;
-    const diff = Math.round((F - allocatedSum) * 100) / 100;
+    const allocatedSum = rawItems.reduce((sum, item) => sum + item.baseFare, 0);
+    const diff = F - allocatedSum;
 
-    if (diff !== 0) {
-        // Adjust the passenger with the largest journey distance
-        let maxIdx = 0;
-        let maxDist = -1;
-        for (let i = 0; i < passengers.length; i++) {
-            const dist = parseFloat(passengers[i].distanceKm || passengers[i].distance || 1.0);
-            if (dist > maxDist) {
-                maxDist = dist;
-                maxIdx = i;
-            }
-        }
-        results[maxIdx].fare = Math.round((results[maxIdx].fare + diff) * 100) / 100;
+    // Sort by largest remainder descending, breaking ties by larger distance
+    const sortedIndices = rawItems
+        .map((item, index) => ({ index, remainder: item.remainder, distance: item.distance }))
+        .sort((a, b) => (b.remainder - a.remainder) || (b.distance - a.distance));
+
+    const finalFares = new Array(passengers.length).fill(0);
+    for (let i = 0; i < passengers.length; i++) {
+        finalFares[i] = rawItems[i].baseFare;
     }
 
-    return results;
+    for (let i = 0; i < diff && i < sortedIndices.length; i++) {
+        finalFares[sortedIndices[i].index] += 1;
+    }
+
+    return rawItems.map((item, idx) => {
+        const p = item.passenger;
+        const uid = item.userId;
+        const fare = finalFares[idx];
+        return {
+            ...p,
+            id: p.id || uid,
+            userId: uid,
+            user_id: uid,
+            name: p.name || p.userName || 'Passenger',
+            journeyDistance: item.distance,
+            distanceKm: item.distance,
+            distance: item.distance,
+            fare: fare,
+            fareAmount: fare
+        };
+    });
 }
 
 /**
