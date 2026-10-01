@@ -264,15 +264,15 @@
                     <div class="flex justify-between items-start mb-4">
                         <div>
                             <span class="text-[10px] font-black text-darkTheme bg-brandYellow px-2.5 py-1 rounded-full uppercase tracking-wider inline-flex items-center gap-1.5">
-                                <i class="fa-solid fa-location-crosshairs"></i> <span id="currentStopOrderBadge">STOP 1 OF 4</span>
+                                <i class="fa-solid fa-location-crosshairs"></i> <span id="currentStopOrderBadge">Awaiting Bookings</span>
                             </span>
-                            <h3 id="currentStopPassengerName" class="text-xl font-black text-white mt-2">Aman Sharma</h3>
+                            <h3 id="currentStopPassengerName" class="text-xl font-black text-white mt-2">No Active Stop</h3>
                             <p id="currentStopLocationText" class="text-xs text-gray-300 mt-0.5 flex items-center gap-1.5">
-                                <i class="fa-solid fa-location-dot text-brandYellow"></i> Knowledge Park II (Sharda Gate)
+                                <i class="fa-solid fa-route text-brandYellow"></i> Awaiting assigned route
                             </p>
                         </div>
                         <div class="text-right">
-                            <span id="currentStopEtaBadge" class="text-sm font-black text-brandYellow font-mono bg-brandYellow/10 border border-brandYellow/20 px-2.5 py-1 rounded-xl">4 min</span>
+                            <span id="currentStopEtaBadge" class="text-sm font-black text-brandYellow font-mono bg-brandYellow/10 border border-brandYellow/20 px-2.5 py-1 rounded-xl">--</span>
                             <p class="text-[10px] text-gray-400 mt-1">Light Traffic</p>
                         </div>
                     </div>
@@ -280,7 +280,7 @@
                     <!-- Primary Action Buttons for Current Stop -->
                     <div class="space-y-2 pt-2">
                         <!-- Navigate Button (Prompt #42: Deep Link to Google Maps Navigation) -->
-                        <a id="btnNavigateGoogleMaps" href="https://www.google.com/maps/dir/?api=1&destination=Knowledge+Park+II+Greater+Noida" target="_blank" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg transition touch-btn">
+                        <a id="btnNavigateGoogleMaps" href="#" target="_blank" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-3.5 px-4 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg transition touch-btn">
                             <i class="fa-solid fa-diamond-turn-right text-base text-yellow-300"></i>
                             <span>NAVIGATE IN GOOGLE MAPS</span>
                         </a>
@@ -299,7 +299,7 @@
                         <!-- Complete Trip Button (Visible after stops) -->
                         <button id="btnCompleteTrip" onclick="handleDriverStopAction('COMPLETE_RIDE')" class="hidden w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-3.5 px-4 rounded-2xl text-xs shadow-lg transition flex items-center justify-center gap-2 touch-btn">
                             <i class="fa-solid fa-flag-checkered"></i>
-                            <span>COMPLETE SHARED TRIP (₹100)</span>
+                            <span>COMPLETE SHARED TRIP</span>
                         </button>
                     </div>
                 </div>
@@ -309,9 +309,9 @@
                     <div class="flex justify-between items-center pb-3 border-b border-gray-800 mb-4">
                         <div class="flex items-center gap-2">
                             <i class="fa-solid fa-users text-brandYellow"></i>
-                            <h4 class="font-extrabold text-sm text-white">Assigned Passengers (<span id="passengerCountText">3 / 4</span>)</h4>
+                            <h4 class="font-extrabold text-sm text-white">Assigned Passengers (<span id="passengerCountText">0 / 20</span>)</h4>
                         </div>
-                        <span class="text-xs font-mono font-bold text-brandYellow" id="rideTotalFareText">₹100 Total</span>
+                        <span class="text-xs font-mono font-bold text-brandYellow" id="rideTotalFareText">₹0 Total</span>
                     </div>
 
                     <div id="driverPassengerList" class="space-y-3">
@@ -544,10 +544,19 @@
         async function loadDriverCurrentRide() {
             try {
                 const res = await window.saathSupabase.getDriverCurrentRide();
-                if (res && res.ride) {
+                if (res && res.ride && Array.isArray(res.ride.passengers) && res.ride.passengers.length > 0) {
                     currentRide = res.ride;
                     renderDriverRideUI(currentRide);
                     renderRideStopsOnMap(currentRide);
+                } else {
+                    currentRide = null;
+                    renderDriverRideUI(null);
+                    if (driverMapInstance) {
+                        stopMarkers.forEach(m => driverMapInstance.removeLayer(m));
+                        stopMarkers = [];
+                        routePolylines.forEach(p => driverMapInstance.removeLayer(p));
+                        routePolylines = [];
+                    }
                 }
             } catch(err) {
                 console.warn('Error loading driver ride:', err);
@@ -555,31 +564,55 @@
         }
 
         function renderDriverRideUI(ride) {
-            if (!ride) return;
-            const stops = ride.stops || [];
-            const currentIdx = ride.current_stop_index || 0;
-            const currentStop = stops[currentIdx] || stops[stops.length - 1];
-            const currentPass = (ride.passengers && ride.passengers[currentIdx]) || null;
+            const stops = (ride && ride.stops) || [];
+            const passengers = (ride && ride.passengers) || [];
+            const capacity = (ride && ride.capacity) || (currentDriver && currentDriver.capacity) || 20;
+            const currentIdx = (ride && ride.current_stop_index) || 0;
+            const currentStop = stops[currentIdx] || stops[0] || null;
+            const currentPass = (passengers && passengers[currentIdx]) || null;
             const isArrived = currentStop && currentStop.status === 'ARRIVED';
             const attStatus = currentPass ? currentPass.attendance_status : null;
 
-            document.getElementById('currentStopOrderBadge').innerText = `STOP ${currentIdx + 1} OF ${stops.length}`;
-            document.getElementById('currentStopPassengerName').innerText = currentStop ? (currentStop.passenger_name || currentStop.passengerName) : 'All Passengers';
-            document.getElementById('currentStopLocationText').innerHTML = `<i class="fa-solid fa-location-dot text-brandYellow"></i> ${currentStop ? (currentStop.pickup_location || currentStop.location) : 'Destination'}`;
-            document.getElementById('currentStopEtaBadge').innerText = currentStop ? currentStop.etaText : '12 min';
-
-            const totalFareVal = Math.round(ride.total_vehicle_fare || ride.totalFare || 100);
+            const orderBadge = document.getElementById('currentStopOrderBadge');
+            const pNameEl = document.getElementById('currentStopPassengerName');
+            const locTextEl = document.getElementById('currentStopLocationText');
+            const etaBadge = document.getElementById('currentStopEtaBadge');
             const totalFareBadge = document.getElementById('rideTotalFareText');
+
+            if (!ride || passengers.length === 0) {
+                if (orderBadge) orderBadge.innerText = 'NO ACTIVE RIDE';
+                if (pNameEl) pNameEl.innerText = 'No passengers assigned yet';
+                if (locTextEl) locTextEl.innerHTML = '<i class="fa-solid fa-route text-gray-500"></i> Waiting for real commuter bookings';
+                if (etaBadge) etaBadge.innerText = '--';
+                if (totalFareBadge) totalFareBadge.innerText = '₹0 Total';
+
+                const btnComplete = document.getElementById('btnCompleteTrip');
+                const btnPickedUp = document.getElementById('btnPickedUpStop');
+                const btnArrived = document.getElementById('btnArrivedAtStop');
+                if (btnComplete) btnComplete.classList.add('hidden');
+                if (btnPickedUp) btnPickedUp.classList.add('hidden');
+                if (btnArrived) btnArrived.classList.add('hidden');
+
+                renderDriverPassengersUI([], 0, capacity);
+                return;
+            }
+
+            if (orderBadge) orderBadge.innerText = `STOP ${currentIdx + 1} OF ${stops.length}`;
+            if (pNameEl) pNameEl.innerText = currentStop ? (currentStop.passenger_name || currentStop.passengerName || (currentPass ? currentPass.name : 'Commuter')) : 'Commuter';
+            if (locTextEl) locTextEl.innerHTML = `<i class="fa-solid fa-location-dot text-brandYellow"></i> ${currentStop ? (currentStop.pickup_location || currentStop.location) : 'Pickup'}`;
+            if (etaBadge) etaBadge.innerText = currentStop ? (currentStop.etaText || '4 min') : '4 min';
+
+            const totalFareVal = Math.round(ride.total_vehicle_fare || ride.totalFare || 0);
             if (totalFareBadge) totalFareBadge.innerText = `₹${totalFareVal} Total`;
 
-            // Google Maps Deep Link (Prompt #42)
+            // Google Maps Deep Link
             const navLink = document.getElementById('btnNavigateGoogleMaps');
             if (navLink && currentStop) {
                 const destQuery = encodeURIComponent(`${currentStop.pickup_location || currentStop.location}, Greater Noida`);
                 navLink.href = `https://www.google.com/maps/dir/?api=1&destination=${destQuery}`;
             }
 
-            // Buttons according to Stop & Attendance state (Prompts #1, #7, #8, #9, #20)
+            // Action Buttons for current stop
             const btnComplete = document.getElementById('btnCompleteTrip');
             const btnPickedUp = document.getElementById('btnPickedUpStop');
             const btnArrived = document.getElementById('btnArrivedAtStop');
@@ -588,56 +621,78 @@
                 btnComplete.innerHTML = `<i class="fa-solid fa-flag-checkered"></i> <span>COMPLETE SHARED TRIP (₹${totalFareVal})</span>`;
             }
 
-            if (currentIdx >= (ride.passengers ? ride.passengers.length : 3)) {
-                btnComplete.classList.remove('hidden');
-                btnPickedUp.classList.add('hidden');
-                btnArrived.classList.add('hidden');
+            if (currentIdx >= passengers.length) {
+                if (btnComplete) btnComplete.classList.remove('hidden');
+                if (btnPickedUp) btnPickedUp.classList.add('hidden');
+                if (btnArrived) btnArrived.classList.add('hidden');
             } else {
-                btnComplete.classList.add('hidden');
-                btnPickedUp.classList.remove('hidden');
+                if (btnComplete) btnComplete.classList.add('hidden');
+                if (btnPickedUp) btnPickedUp.classList.remove('hidden');
 
                 if (isArrived) {
                     if (attStatus === 'PRESENT') {
-                        btnArrived.classList.add('hidden');
-                        btnPickedUp.innerHTML = '<i class="fa-solid fa-check-double"></i> <span>PICKED UP (PASSENGER PRESENT)</span>';
-                        btnPickedUp.className = 'col-span-2 w-full bg-emerald-500 hover:bg-emerald-400 text-darkTheme font-black py-3.5 px-4 rounded-2xl text-xs transition shadow-lg flex items-center justify-center gap-1.5 touch-btn animate-pulse';
-                        btnPickedUp.setAttribute('onclick', "handleDriverStopAction('PICKED_UP')");
+                        if (btnArrived) btnArrived.classList.add('hidden');
+                        if (btnPickedUp) {
+                            btnPickedUp.innerHTML = '<i class="fa-solid fa-check-double"></i> <span>PICKED UP (PASSENGER PRESENT)</span>';
+                            btnPickedUp.className = 'col-span-2 w-full bg-emerald-500 hover:bg-emerald-400 text-darkTheme font-black py-3.5 px-4 rounded-2xl text-xs transition shadow-lg flex items-center justify-center gap-1.5 touch-btn animate-pulse';
+                            btnPickedUp.setAttribute('onclick', "handleDriverStopAction('PICKED_UP')");
+                        }
                     } else if (attStatus === 'ABSENT') {
-                        btnArrived.classList.add('hidden');
-                        btnPickedUp.innerHTML = '<i class="fa-solid fa-forward"></i> <span>NEXT STOP (PASSENGER ABSENT)</span>';
-                        btnPickedUp.className = 'col-span-2 w-full bg-red-600 hover:bg-red-500 text-white font-black py-3.5 px-4 rounded-2xl text-xs transition shadow-lg flex items-center justify-center gap-1.5 touch-btn';
-                        btnPickedUp.setAttribute('onclick', "handleDriverStopAction('NEXT_STOP')");
+                        if (btnArrived) btnArrived.classList.add('hidden');
+                        if (btnPickedUp) {
+                            btnPickedUp.innerHTML = '<i class="fa-solid fa-forward"></i> <span>NEXT STOP (PASSENGER ABSENT)</span>';
+                            btnPickedUp.className = 'col-span-2 w-full bg-red-600 hover:bg-red-500 text-white font-black py-3.5 px-4 rounded-2xl text-xs transition shadow-lg flex items-center justify-center gap-1.5 touch-btn';
+                            btnPickedUp.setAttribute('onclick', "handleDriverStopAction('NEXT_STOP')");
+                        }
                     } else {
-                        // CHECK_IN_OPEN - Waiting for passenger
-                        btnArrived.classList.remove('hidden');
-                        btnArrived.innerHTML = '<i class="fa-solid fa-check"></i> <span>ARRIVED ✓ (WAITING)</span>';
-                        btnArrived.className = 'w-full bg-gray-800 text-brandYellow border border-brandYellow/40 font-bold py-3 px-3 rounded-2xl text-xs flex items-center justify-center gap-1.5';
-                        btnArrived.setAttribute('onclick', '');
-
-                        btnPickedUp.innerHTML = '<i class="fa-solid fa-user-check"></i> <span>PICKED UP</span>';
-                        btnPickedUp.className = 'w-full bg-brandYellow hover:bg-yellow-400 text-darkTheme font-black py-3 px-3 rounded-2xl text-xs transition shadow-md flex items-center justify-center gap-1.5 touch-btn';
-                        btnPickedUp.setAttribute('onclick', "handleDriverStopAction('PICKED_UP')");
+                        if (btnArrived) {
+                            btnArrived.classList.remove('hidden');
+                            btnArrived.innerHTML = '<i class="fa-solid fa-check"></i> <span>ARRIVED ✓ (WAITING)</span>';
+                            btnArrived.className = 'w-full bg-gray-800 text-brandYellow border border-brandYellow/40 font-bold py-3 px-3 rounded-2xl text-xs flex items-center justify-center gap-1.5';
+                            btnArrived.setAttribute('onclick', '');
+                        }
+                        if (btnPickedUp) {
+                            btnPickedUp.innerHTML = '<i class="fa-solid fa-user-check"></i> <span>PICKED UP</span>';
+                            btnPickedUp.className = 'w-full bg-brandYellow hover:bg-yellow-400 text-darkTheme font-black py-3 px-3 rounded-2xl text-xs transition shadow-md flex items-center justify-center gap-1.5 touch-btn';
+                            btnPickedUp.setAttribute('onclick', "handleDriverStopAction('PICKED_UP')");
+                        }
                     }
                 } else {
-                    btnArrived.classList.remove('hidden');
-                    btnArrived.innerHTML = `<i class="fa-solid fa-bell"></i> <span>I'VE ARRIVED</span>`;
-                    btnArrived.className = 'w-full bg-brandYellow hover:bg-yellow-400 text-darkTheme font-black py-3 px-3 rounded-2xl text-xs transition shadow-md flex items-center justify-center gap-1.5 touch-btn';
-                    btnArrived.setAttribute('onclick', "handleDriverStopAction('ARRIVED')");
-
-                    btnPickedUp.innerHTML = '<i class="fa-solid fa-check"></i> <span>PICKED UP</span>';
-                    btnPickedUp.className = 'w-full bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 font-bold py-3 px-3 rounded-2xl text-xs transition flex items-center justify-center gap-1.5 touch-btn';
-                    btnPickedUp.setAttribute('onclick', "handleDriverStopAction('PICKED_UP')");
+                    if (btnArrived) {
+                        btnArrived.classList.remove('hidden');
+                        btnArrived.innerHTML = `<i class="fa-solid fa-bell"></i> <span>I'VE ARRIVED</span>`;
+                        btnArrived.className = 'w-full bg-brandYellow hover:bg-yellow-400 text-darkTheme font-black py-3 px-3 rounded-2xl text-xs transition shadow-md flex items-center justify-center gap-1.5 touch-btn';
+                        btnArrived.setAttribute('onclick', "handleDriverStopAction('ARRIVED')");
+                    }
+                    if (btnPickedUp) {
+                        btnPickedUp.innerHTML = '<i class="fa-solid fa-check"></i> <span>PICKED UP</span>';
+                        btnPickedUp.className = 'w-full bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 font-bold py-3 px-3 rounded-2xl text-xs transition flex items-center justify-center gap-1.5 touch-btn';
+                        btnPickedUp.setAttribute('onclick', "handleDriverStopAction('PICKED_UP')");
+                    }
                 }
             }
 
-            renderDriverPassengersUI(ride.passengers || [], currentIdx);
+            renderDriverPassengersUI(passengers, currentIdx, capacity);
         }
 
-        function renderDriverPassengersUI(passengers, currentStopIdx) {
+        function renderDriverPassengersUI(passengers, currentStopIdx, capacity = 20) {
             const container = document.getElementById('driverPassengerList');
+            const countEl = document.getElementById('passengerCountText');
+            if (countEl) {
+                countEl.innerText = `${(passengers || []).length} / ${capacity}`;
+            }
             if (!container) return;
 
-            document.getElementById('passengerCountText').innerText = `${passengers.length} / 4`;
+            if (!passengers || passengers.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center text-gray-400 bg-gray-900/40 rounded-2xl border border-gray-800">
+                        <i class="fa-solid fa-user-clock text-2xl text-gray-500 mb-2 block"></i>
+                        <p class="text-xs font-semibold text-gray-400">No passengers assigned yet</p>
+                        <p class="text-[10px] text-gray-500 mt-0.5">Real commuter bookings will appear here live</p>
+                    </div>
+                `;
+                return;
+            }
 
             container.innerHTML = passengers.map((p, idx) => {
                 const isCurrent = idx === currentStopIdx;
@@ -659,16 +714,18 @@
                     statusBadge = '<span class="text-[10px] font-bold text-brandYellow bg-brandYellow/15 border border-brandYellow/30 px-2 py-0.5 rounded-full animate-pulse">NEXT STOP</span>';
                 }
 
-                const distKm = p.journeyDistance || p.distanceKm || p.distance || 0;
+                const displayName = p.name || 'Commuter';
+                const avatarSrc = p.avatar || p.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=1E293B&color=F5B800&bold=true`;
+                const pickupLoc = p.pickup || 'Pickup Stop';
                 const fareAmount = Math.round(p.fareAmount || p.fare || 0);
 
                 return `
                     <div class="p-3.5 rounded-2xl border ${isCurrent ? 'bg-gray-800/90 border-brandYellow shadow-md' : 'bg-gray-900/60 border-gray-800'} flex items-center justify-between transition">
                         <div class="flex items-center gap-3">
-                            <img src="${p.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}" class="w-9 h-9 rounded-full object-cover border border-gray-700">
+                            <img src="${avatarSrc}" alt="${displayName}" class="w-9 h-9 rounded-full object-cover border border-gray-700" onerror="this.src='https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=1E293B&color=F5B800&bold=true'">
                             <div>
-                                <h5 class="font-bold text-white text-xs">${p.name}</h5>
-                                <p class="text-[10px] text-gray-400 truncate max-w-[160px] sm:max-w-[200px]">${p.pickup}</p>
+                                <h5 class="font-bold text-white text-xs">${displayName}</h5>
+                                <p class="text-[10px] text-gray-400 truncate max-w-[160px] sm:max-w-[200px]">${pickupLoc}</p>
                             </div>
                         </div>
                         <div class="text-right">

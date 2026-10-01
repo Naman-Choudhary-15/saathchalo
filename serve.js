@@ -2306,24 +2306,23 @@ const server = http.createServer(async (req, res) => {
                     matchedRide.session_type = matchedRide.session_type || sessionType;
                     // Participant joins existing pool
                     if (!Array.isArray(matchedRide.participants)) {
-                        matchedRide.participants = [{
-                            id: matchedRide.driver_name ? 'rider_orig_1' : user.id,
-                            userId: matchedRide.driver_name ? 'rider_orig_1' : user.id,
-                            name: matchedRide.driver_name ? 'Commuter 1' : user.name,
-                            distanceKm: distanceKm,
-                            pickup: matchedRide.pickup || pickup,
-                            dropoff: matchedRide.destination || dropoff
-                        }];
+                        matchedRide.participants = [];
                     }
 
-                    matchedRide.participants.push({
-                        id: user.id,
-                        userId: user.id,
-                        name: user.name,
-                        distanceKm: distanceKm,
-                        pickup: pickup,
-                        dropoff: dropoff
-                    });
+                    const alreadyInPool = matchedRide.participants.some(p => (p.userId === user.id || p.id === user.id));
+                    if (!alreadyInPool) {
+                        matchedRide.participants.push({
+                            id: user.id,
+                            userId: user.id,
+                            user_id: user.id,
+                            name: user.name,
+                            avatar: user.avatar_url || user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1E293B&color=F5B800&bold=true`,
+                            distanceKm: distanceKm,
+                            journeyDistance: distanceKm,
+                            pickup: pickup,
+                            dropoff: dropoff
+                        });
+                    }
 
                     const totalPoolRiders = matchedRide.participants.length;
                     const newAllocation = allocateVehicleForCount(totalPoolRiders, matchedRide.fuel_type || fuelPreference);
@@ -2372,9 +2371,16 @@ const server = http.createServer(async (req, res) => {
                     const totalRideFare = calculateTotalVehicleFare(allocation.type, allocation.fuelType, distanceKm);
                     finalPassengerFare = totalRideFare; // Section 8: Single passenger pays full total vehicle fare
 
+                    const assignedDriver = (database.drivers && database.drivers[0]) || {
+                        id: 'drv_satish_sharma',
+                        name: 'Satish Sharma'
+                    };
+
                     const newRide = {
                         id: rideId,
                         community_id: 'knowledge-park',
+                        driver_id: assignedDriver.id,
+                        driver_name: assignedDriver.name,
                         pickup: pickup,
                         destination: dropoff,
                         vehicle_type: allocation.vehicleType,
@@ -2394,6 +2400,7 @@ const server = http.createServer(async (req, res) => {
                             userId: user.id,
                             user_id: user.id,
                             name: user.name,
+                            avatar: user.avatar_url || user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=1E293B&color=F5B800&bold=true`,
                             distanceKm: distanceKm,
                             journeyDistance: distanceKm,
                             fare: finalPassengerFare,
@@ -2401,7 +2408,6 @@ const server = http.createServer(async (req, res) => {
                             pickup: pickup,
                             dropoff: dropoff
                         }],
-                        driver_name: ['Ramesh Kumar', 'Satish Sharma', 'Mohd. Imran', 'Sunil Yadav'][Math.floor(Math.random() * 4)],
                         created_at: new Date().toISOString()
                     };
 
@@ -2466,23 +2472,32 @@ const server = http.createServer(async (req, res) => {
 
                 const targetRide = matchedRide || (typeof newRide !== 'undefined' ? newRide : null);
                 if (targetRide) {
-                    targetRide.passengers = (targetRide.participants || []).map(p => ({
-                        id: p.userId || p.id,
-                        name: p.name,
-                        avatar: p.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-                        pickup: p.pickup,
-                        dropoff: p.dropoff,
-                        distanceKm: p.journeyDistance || p.distanceKm || 4.0,
-                        journeyDistance: p.journeyDistance || p.distanceKm || 4.0,
-                        fare: p.fare,
-                        fareAmount: p.fare,
-                        status: 'WAITING',
-                        attendance_status: 'WAITING'
-                    }));
+                    targetRide.passengers = (targetRide.participants || []).map(p => {
+                        const uId = p.userId || p.id || p.user_id;
+                        const realUser = (database.users || []).find(u => u.id === uId);
+                        const displayName = (realUser && realUser.name) || p.name || 'Commuter';
+                        const avatarSrc = (realUser && (realUser.avatar_url || realUser.avatar)) || p.avatar || p.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=1E293B&color=F5B800&bold=true`;
+                        return {
+                            id: uId,
+                            userId: uId,
+                            name: displayName,
+                            avatar: avatarSrc,
+                            pickup: p.pickup,
+                            dropoff: p.dropoff,
+                            distanceKm: p.journeyDistance || p.distanceKm || 4.0,
+                            journeyDistance: p.journeyDistance || p.distanceKm || 4.0,
+                            fare: p.fare,
+                            fareAmount: p.fare,
+                            status: 'WAITING',
+                            attendance_status: 'WAITING'
+                        };
+                    });
 
-                    const stopsList = (targetRide.participants || []).map((p, idx) => ({
+                    const stopsList = (targetRide.passengers || []).map((p, idx) => ({
                         order: idx + 1,
                         type: 'PICKUP',
+                        passengerId: p.id,
+                        passenger_id: p.id,
                         passengerName: p.name,
                         passenger_name: p.name,
                         location: p.pickup,
@@ -3274,98 +3289,87 @@ const server = http.createServer(async (req, res) => {
             today_earnings: 480
         };
 
-        const forceReset = urlParams.get('reset') === 'true';
-        // Find latest active assigned ride for this driver
-        let activeRide = forceReset ? null : (database.rides || []).slice().reverse().find(r => 
+        // Find latest active assigned ride for this driver, or active pool with confirmed participants
+        let activeRide = (database.rides || []).slice().reverse().find(r => 
             (r.driver_id === driver.id || (driver.name && r.driver_name && r.driver_name.includes(driver.name))) &&
-            r.status !== 'RIDE_COMPLETED' && r.status !== 'CANCELLED' && Array.isArray(r.passengers) && r.passengers.length > 0 &&
-            (r.current_stop_index || 0) < (r.stops ? r.stops.length : 4)
+            r.status !== 'RIDE_COMPLETED' && r.status !== 'CANCELLED' && Array.isArray(r.participants) && r.participants.length > 0 &&
+            (r.current_stop_index || 0) < (r.stops ? r.stops.length : 10)
         );
 
         if (!activeRide) {
-            // Seed a realistic judge-ready shared pooled ride with 3 distinct real riders
-            activeRide = {
-                id: 'ride_pool_live_' + (driver ? driver.id : '1'),
-                driver_id: driver ? driver.id : 'drv_satish_sharma',
-                driver_name: driver ? driver.name : 'Satish Sharma',
-                vehicle_id: driver ? driver.vehicle_id : 'VH-SHUTTLE-1',
-                vehicle_type: driver ? driver.vehicle_type : 'TRAVELLER',
-                vehicle_title: driver ? driver.vehicle_title : 'Traveller • EV',
-                fuel_type: driver ? driver.fuel_type : 'EV',
-                registration_number: driver ? driver.registration_number : 'UP16-TR-2024',
-                capacity: driver ? driver.capacity : 20,
-                status: 'DRIVER_EN_ROUTE',
-                current_stop_index: 0,
-                eta_minutes: 12,
-                traffic_condition: 'Light',
-                total_vehicle_fare: 100,
-                pickup: 'Knowledge Park II',
-                destination: 'Pari Chowk Metro',
-                passengers: [
-                    {
-                        id: 'usr_p1_aman',
-                        name: 'Aman Sharma',
-                        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-                        pickup: 'Knowledge Park II (Sharda Gate)',
-                        dropoff: 'Pari Chowk Metro',
-                        distanceKm: 4.0,
-                        fare: 20,
-                        status: 'WAITING',
-                        attendance_status: 'WAITING'
-                    },
-                    {
-                        id: 'usr_p2_riya',
-                        name: 'Riya Verma',
-                        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-                        pickup: 'NIET Old Campus Gate 1',
-                        dropoff: 'Pari Chowk Metro',
-                        distanceKm: 6.0,
-                        fare: 30,
-                        status: 'WAITING',
-                        attendance_status: 'WAITING'
-                    },
-                    {
-                        id: 'usr_p3_rahul',
-                        name: 'Rahul Yadav',
-                        avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80',
-                        pickup: 'Galgotias Gate 2',
-                        dropoff: 'Pari Chowk Metro',
-                        distanceKm: 10.0,
-                        fare: 50,
-                        status: 'WAITING',
-                        attendance_status: 'WAITING'
-                    }
-                ],
-                stops: [
-                    { order: 1, type: 'PICKUP', passengerName: 'Aman Sharma', passenger_name: 'Aman Sharma', location: 'Knowledge Park II (Sharda Gate)', pickup_location: 'Knowledge Park II (Sharda Gate)', lat: 28.4744, lng: 77.5040, status: 'NEXT', etaText: '4 min' },
-                    { order: 2, type: 'PICKUP', passengerName: 'Riya Verma', passenger_name: 'Riya Verma', location: 'NIET Old Campus Gate 1', pickup_location: 'NIET Old Campus Gate 1', lat: 28.4715, lng: 77.5070, status: 'PENDING', etaText: '8 min' },
-                    { order: 3, type: 'PICKUP', passengerName: 'Rahul Yadav', passenger_name: 'Rahul Yadav', location: 'Galgotias Gate 2', pickup_location: 'Galgotias Gate 2', lat: 28.4690, lng: 77.5090, status: 'PENDING', etaText: '11 min' },
-                    { order: 4, type: 'DROPOFF', passengerName: 'All Passengers', passenger_name: 'All Passengers', location: 'Pari Chowk Metro', pickup_location: 'Pari Chowk Metro', lat: 28.4682, lng: 77.5117, status: 'PENDING', etaText: '14 min' }
-                ]
-            };
-            const existingIdx = database.rides.findIndex(r => r.id === activeRide.id);
-            if (existingIdx >= 0) {
-                database.rides[existingIdx] = activeRide;
-            } else {
-                database.rides.push(activeRide);
+            // Find any active pool ride with real participants that needs driver assignment
+            activeRide = (database.rides || []).slice().reverse().find(r => 
+                r.status !== 'RIDE_COMPLETED' && r.status !== 'CANCELLED' && 
+                Array.isArray(r.participants) && r.participants.length > 0 &&
+                (r.current_stop_index || 0) < (r.stops ? r.stops.length : 10)
+            );
+            if (activeRide) {
+                activeRide.driver_id = driver.id;
+                activeRide.driver_name = driver.name;
+                saveDb();
             }
-            saveDb();
         }
 
         if (activeRide) {
+            // Re-sync authoritative passenger identities directly from authenticated database.users
+            activeRide.passengers = (activeRide.participants || []).map(p => {
+                const uId = p.userId || p.user_id || p.id;
+                const realUser = (database.users || []).find(u => u.id === uId);
+                const name = (realUser && realUser.name) || p.name || 'Commuter';
+                const avatar = (realUser && (realUser.avatar_url || realUser.avatar)) || p.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1E293B&color=F5B800&bold=true`;
+                return {
+                    id: uId,
+                    userId: uId,
+                    name: name,
+                    avatar: avatar,
+                    pickup: p.pickup,
+                    dropoff: p.dropoff,
+                    distanceKm: p.journeyDistance || p.distanceKm || 4.0,
+                    journeyDistance: p.journeyDistance || p.distanceKm || 4.0,
+                    fare: p.fare || p.fareAmount || 0,
+                    fareAmount: p.fareAmount || p.fare || 0,
+                    status: p.status || 'WAITING',
+                    attendance_status: p.attendance_status || 'WAITING',
+                    check_in_at: p.check_in_at || null,
+                    absence_finalized_at: p.absence_finalized_at || null
+                };
+            });
+
+            // Re-sync stops from real passengers
+            const stopsList = (activeRide.passengers || []).map((p, idx) => ({
+                order: idx + 1,
+                type: 'PICKUP',
+                passengerId: p.id,
+                passenger_id: p.id,
+                passengerName: p.name,
+                passenger_name: p.name,
+                location: p.pickup,
+                pickup_location: p.pickup,
+                lat: 28.4744 - (idx * 0.003),
+                lng: 77.5040 + (idx * 0.003),
+                status: idx < (activeRide.current_stop_index || 0) ? 'COMPLETED' : (idx === (activeRide.current_stop_index || 0) ? (activeRide.status === 'ARRIVED' ? 'ARRIVED' : 'NEXT') : 'PENDING'),
+                etaText: `${(idx + 1) * 3} min`
+            }));
+            stopsList.push({
+                order: stopsList.length + 1,
+                type: 'DROPOFF',
+                passengerName: 'All Passengers',
+                passenger_name: 'All Passengers',
+                location: activeRide.destination || 'Destination',
+                pickup_location: activeRide.destination || 'Destination',
+                lat: 28.4682,
+                lng: 77.5117,
+                status: (activeRide.current_stop_index || 0) >= stopsList.length ? 'NEXT' : 'PENDING',
+                etaText: `${(stopsList.length + 1) * 3 + 4} min`
+            });
+            activeRide.stops = stopsList;
+            activeRide.passengers_count = activeRide.passengers.length;
+            const curIdx = activeRide.current_stop_index || 0;
+            activeRide.current_stop = activeRide.stops[curIdx] || activeRide.stops[activeRide.stops.length - 1];
+
             if (activeRide.id && Array.isArray(activeRide.participants) && activeRide.participants.length > 0) {
                 calculateSharedFares(activeRide.id);
             }
-            activeRide.passengers_count = (activeRide.passengers || []).length;
-            const curIdx = activeRide.current_stop_index || 0;
-            activeRide.current_stop = (activeRide.stops && activeRide.stops[curIdx]) || {
-                order: curIdx + 1,
-                passenger_name: 'Next Passenger',
-                passengerName: 'Next Passenger',
-                pickup_location: 'Next Stop',
-                location: 'Next Stop',
-                status: 'NEXT'
-            };
             if (!activeRide.traffic) {
                 activeRide.traffic = {
                     condition: activeRide.traffic_condition || 'Normal Flow',
@@ -3376,7 +3380,13 @@ const server = http.createServer(async (req, res) => {
 
         return sendJson(res, 200, {
             success: true,
-            ride: activeRide
+            ride: activeRide || null,
+            driver: {
+                id: driver.id,
+                name: driver.name,
+                status: driver.status,
+                vehicle: driver.vehicle_title || `${driver.vehicle_type} • ${driver.fuel_type}`
+            }
         });
     }
 
