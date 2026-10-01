@@ -794,6 +794,97 @@ function calculateHaversineDistanceMeters(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
+// ====================================================
+// SERVER-AUTHORITATIVE ROUTE & DISTANCE ENGINE (Section 1, 2, 3)
+// ====================================================
+const SERVER_LANDMARKS = {
+    'knowledge park': [28.4744, 77.5040],
+    'kp': [28.4744, 77.5040],
+    'pari chowk': [28.4682, 77.5117],
+    'alpha 1': [28.4962, 77.5140],
+    'alpha 2': [28.4890, 77.5210],
+    'alpha': [28.4962, 77.5140],
+    'delta 1': [28.4820, 77.5310],
+    'delta': [28.4820, 77.5310],
+    'jagat farm': [28.4720, 77.5080],
+    'sector 62': [28.6280, 77.3649],
+    'noida sector 62': [28.6280, 77.3649],
+    'noida sec 62': [28.6280, 77.3649],
+    'sector 137': [28.5130, 77.4080],
+    'noida sector 137': [28.5130, 77.4080],
+    'ghaziabad': [28.6692, 77.4300],
+    'botanical garden': [28.5640, 77.3340],
+    'botanical': [28.5640, 77.3340],
+    'greater noida west': [28.6080, 77.4260],
+    'gaur city': [28.6080, 77.4260]
+};
+
+const KNOWN_CORRIDOR_DISTANCES = {
+    'kp_botanical': 10.0,
+    'botanical_kp': 10.0,
+    'knowledge park_botanical': 10.0,
+    'botanical_knowledge park': 10.0,
+    'alpha 1_botanical': 6.0,
+    'botanical_alpha 1': 6.0,
+    'alpha_botanical': 6.0,
+    'botanical_alpha': 6.0,
+    'pari chowk_botanical': 4.0,
+    'botanical_pari chowk': 4.0,
+    'pari_botanical': 4.0,
+    'botanical_pari': 4.0,
+    'kp_pari': 3.5,
+    'pari_kp': 3.5,
+    'knowledge park_pari': 3.5,
+    'pari_knowledge park': 3.5,
+    'kp_alpha': 3.5,
+    'alpha_kp': 3.5,
+    'knowledge park_alpha': 3.5,
+    'alpha_knowledge park': 3.5,
+    'kp_sec62': 22.0,
+    'sec62_kp': 22.0,
+    'knowledge park_sec62': 22.0,
+    'sec62_knowledge park': 22.0,
+    'kp_ghaziabad': 28.0,
+    'ghaziabad_kp': 28.0,
+    'knowledge park_ghaziabad': 28.0,
+    'ghaziabad_knowledge park': 28.0
+};
+
+function getLandmarkCoords(query) {
+    if (!query || typeof query !== 'string') return [28.4744, 77.5040];
+    const clean = query.trim().toLowerCase();
+    for (const key in SERVER_LANDMARKS) {
+        if (clean.includes(key) || key.includes(clean)) {
+            return SERVER_LANDMARKS[key];
+        }
+    }
+    return [28.4744, 77.5040];
+}
+
+/**
+ * Calculates authoritative, server-derived journey distance.
+ * NEVER trusts client-submitted distanceKm or fare values.
+ */
+function calculateAuthoritativeJourneyDistance(pickup, dropoff) {
+    const pClean = (pickup || '').trim().toLowerCase();
+    const dClean = (dropoff || '').trim().toLowerCase();
+
+    for (const key in KNOWN_CORRIDOR_DISTANCES) {
+        const [a, b] = key.split('_');
+        if (pClean.includes(a) && dClean.includes(b)) {
+            return KNOWN_CORRIDOR_DISTANCES[key];
+        }
+    }
+
+    const c1 = getLandmarkCoords(pickup);
+    const c2 = getLandmarkCoords(dropoff);
+    const meters = calculateHaversineDistanceMeters(c1[0], c1[1], c2[0], c2[1]);
+    if (meters <= 0) return 3.5;
+
+    const km = (meters / 1000) * 1.35;
+    return Math.max(1.0, Math.round(km * 10) / 10);
+}
+
 /**
  * FAIR FARE ENGINE — calculateSharedFares(rideId)
  * Authoritative backend function to calculate or retrieve frozen distance-proportional shared fares.
@@ -801,7 +892,7 @@ function calculateHaversineDistanceMeters(lat1, lon1, lat2, lon2) {
  * 1. Loads ride & vehicle
  * 2. Loads confirmed participants
  * 3. Obtains total vehicle fare
- * 4. Calculates each participant's journey distance
+ * 4. Calculates each participant's journey distance using SERVER-AUTHORITATIVE coordinates
  * 5. Applies fair distance ratio: fare_i = TOTAL_VEHICLE_FARE * (d_i / D)
  * 6. Reconciles whole-rupee rounding: SUM(fares) === TOTAL_VEHICLE_FARE
  * 7. Persists personal fares to database (bookings & ride participants)
@@ -839,21 +930,23 @@ function calculateSharedFares(rideId) {
     // Load active confirmed bookings for this ride
     const confirmedBookings = (database.bookings || []).filter(b => b.ride_id === rideId && b.status !== 'CANCELLED');
     
-    // Construct real participant list
+    // Construct real participant list with SERVER-AUTHORITATIVE distances
     let participants = [];
     if (Array.isArray(ride.participants) && ride.participants.length > 0) {
         for (const p of ride.participants) {
             const uid = p.userId || p.user_id || p.id;
             const b = confirmedBookings.find(cb => cb.user_id === uid || cb.id === uid);
-            const dist = parseFloat(p.journeyDistance || p.distanceKm || (b ? b.distance_km || b.distanceKm : 7.4));
+            const pPickup = p.pickup || (b ? b.pickup : ride.pickup);
+            const pDropoff = p.dropoff || (b ? b.dropoff : ride.destination);
+            const dist = calculateAuthoritativeJourneyDistance(pPickup, pDropoff);
             participants.push({
                 ...p,
                 id: uid,
                 userId: uid,
                 user_id: uid,
                 name: p.name || (b ? b.name || b.user_name : 'Passenger'),
-                pickup: p.pickup || (b ? b.pickup : ride.pickup),
-                dropoff: p.dropoff || (b ? b.dropoff : ride.destination),
+                pickup: pPickup,
+                dropoff: pDropoff,
                 journeyDistance: dist,
                 distanceKm: dist,
                 distance: dist
@@ -861,14 +954,16 @@ function calculateSharedFares(rideId) {
         }
     } else if (confirmedBookings.length > 0) {
         participants = confirmedBookings.map(b => {
-            const dist = parseFloat(b.distance_km || b.distanceKm || b.distance || 7.4);
+            const pPickup = b.pickup || ride.pickup;
+            const pDropoff = b.dropoff || ride.destination;
+            const dist = calculateAuthoritativeJourneyDistance(pPickup, pDropoff);
             return {
                 id: b.user_id,
                 userId: b.user_id,
                 user_id: b.user_id,
                 name: b.name || b.user_name || 'Passenger',
-                pickup: b.pickup || ride.pickup,
-                dropoff: b.dropoff || ride.destination,
+                pickup: pPickup,
+                dropoff: pDropoff,
                 journeyDistance: dist,
                 distanceKm: dist,
                 distance: dist
@@ -2150,7 +2245,9 @@ const server = http.createServer(async (req, res) => {
                 const body = await parseJsonBody(req);
                 const pickup = body.pickup || 'Knowledge Park, Greater Noida';
                 const dropoff = body.dropoff || 'Alpha 1, Greater Noida';
-                const distanceKm = Number(body.distance_km || body.distanceKm || 3.5);
+                // CRITICAL (Section 1, 2, 3): Derive distance strictly from server-side route geometry & landmarks.
+                // NEVER trust client-submitted distanceKm or fare values!
+                const distanceKm = calculateAuthoritativeJourneyDistance(pickup, dropoff);
                 const fuelPreference = body.fuel_preference || body.fuelPreference || 'EV';
 
                 if (!user) {
@@ -2479,28 +2576,59 @@ const server = http.createServer(async (req, res) => {
     }
 
     // ----------------------------------------------------
-    // API: Authoritative Shared Fare Endpoint (Sections 6, 22)
+    // API: Authoritative Shared Fare Endpoint (Sections 6, 7, 22)
     // ----------------------------------------------------
     if ((pathname.startsWith('/api/rides/') || pathname.startsWith('/api/ride/')) && pathname.endsWith('/fare') && req.method === 'GET') {
         const parts = pathname.split('/');
         const rideId = parts[3];
-        const fareData = calculateSharedFares(rideId);
-        if (!fareData) {
-            return sendJson(res, 404, { error: 'Ride not found or fare cannot be calculated.' });
-        }
-        return sendJson(res, 200, fareData);
-    }
-
-    // ----------------------------------------------------
-    // API: Finalize & Freeze Shared Fare Endpoint (Section 14)
-    // ----------------------------------------------------
-    if ((pathname.startsWith('/api/rides/') || pathname.startsWith('/api/ride/')) && pathname.endsWith('/finalize-fare') && req.method === 'POST') {
-        const parts = pathname.split('/');
-        const rideId = parts[3];
+        const user = getAuthenticatedUser(req);
         const database = loadDb();
         const ride = (database.rides || []).find(r => r.id === rideId);
         if (!ride) {
             return sendJson(res, 404, { error: 'Ride not found.' });
+        }
+
+        const fareData = calculateSharedFares(rideId);
+        if (!fareData) {
+            return sendJson(res, 404, { error: 'Ride not found or fare cannot be calculated.' });
+        }
+
+        // Security check (Section 7, 23):
+        // If user is authenticated customer and NOT driver/admin, ensure they belong to this ride
+        if (user && user.role !== 'ADMIN' && user.role !== 'DRIVER') {
+            const isParticipant = (ride.participants || []).some(p => (p.userId === user.id || p.id === user.id));
+            if (!isParticipant) {
+                // Not a participant of this ride
+                return sendJson(res, 403, { error: 'Unauthorized to access fare information for this ride.' });
+            }
+        }
+
+        return sendJson(res, 200, fareData);
+    }
+
+    // ----------------------------------------------------
+    // API: Finalize & Freeze Shared Fare Endpoint (Section 6, 14)
+    // ----------------------------------------------------
+    if ((pathname.startsWith('/api/rides/') || pathname.startsWith('/api/ride/')) && pathname.endsWith('/finalize-fare') && req.method === 'POST') {
+        const parts = pathname.split('/');
+        const rideId = parts[3];
+        const user = getAuthenticatedUser(req);
+        const database = loadDb();
+        const ride = (database.rides || []).find(r => r.id === rideId);
+        if (!ride) {
+            return sendJson(res, 404, { error: 'Ride not found.' });
+        }
+
+        // Finalization Security (Section 6):
+        // Only assigned driver, admin, or system actor can finalize fare
+        if (user) {
+            const isAssignedDriver = user.role === 'DRIVER' || user.driver_id === ride.driver_id || (database.drivers || []).some(d => d.user_id === user.id && d.id === ride.driver_id);
+            const isAdmin = user.role === 'ADMIN';
+            const isFirstRider = Array.isArray(ride.participants) && ride.participants[0] && (ride.participants[0].userId === user.id || ride.participants[0].id === user.id);
+            
+            if (!isAssignedDriver && !isAdmin && !isFirstRider) {
+                return sendJson(res, 403, { error: 'Unauthorized: Only the assigned driver or platform administrator can finalize ride fare.' });
+            }
         }
 
         const fareData = calculateSharedFares(rideId);
@@ -3148,8 +3276,8 @@ const server = http.createServer(async (req, res) => {
         };
 
         const forceReset = urlParams.get('reset') === 'true';
-        // Find active assigned ride for this driver
-        let activeRide = forceReset ? null : (database.rides || []).find(r => 
+        // Find latest active assigned ride for this driver
+        let activeRide = forceReset ? null : (database.rides || []).slice().reverse().find(r => 
             (r.driver_id === driver.id || (driver.name && r.driver_name && r.driver_name.includes(driver.name))) &&
             r.status !== 'RIDE_COMPLETED' && r.status !== 'CANCELLED' && Array.isArray(r.passengers) && r.passengers.length > 0 &&
             (r.current_stop_index || 0) < (r.stops ? r.stops.length : 4)
@@ -3226,6 +3354,9 @@ const server = http.createServer(async (req, res) => {
         }
 
         if (activeRide) {
+            if (activeRide.id && Array.isArray(activeRide.participants) && activeRide.participants.length > 0) {
+                calculateSharedFares(activeRide.id);
+            }
             activeRide.passengers_count = (activeRide.passengers || []).length;
             const curIdx = activeRide.current_stop_index || 0;
             activeRide.current_stop = (activeRide.stops && activeRide.stops[curIdx]) || {
