@@ -142,10 +142,13 @@ class SaathLiveService {
         }
 
         try {
-            const sseUrl = window.location.origin + '/api/events/stream';
+            const apiBase = this.getApiBase();
+            const sseUrl = (apiBase ? apiBase.replace(/\/$/, '') : window.location.origin) + '/api/events/stream';
+            console.log('[SC REALTIME] CONNECTING', sseUrl);
             this.sse = new EventSource(sseUrl);
 
             this.sse.onopen = () => {
+                console.log('[SC REALTIME] CONNECTED');
                 if (this.disconnectDebounceTimer) {
                     clearTimeout(this.disconnectDebounceTimer);
                     this.disconnectDebounceTimer = null;
@@ -177,7 +180,10 @@ class SaathLiveService {
             this.sse.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    this.handleRealtimeEvent(data.type, data.payload);
+                    if (data && data.type) {
+                        console.log(`[SC REALTIME] EVENT: ${data.type}`, data.payload);
+                        this.handleRealtimeEvent(data.type, data.payload);
+                    }
                 } catch (err) {
                     // Ignore keepalive comments or non-json lines
                 }
@@ -270,6 +276,9 @@ class SaathLiveService {
                 try { cb(payload); } catch (e) {}
             });
         } else if (type === 'RIDE_ALLOCATED') {
+            if (typeof window.handleRideAllocated === 'function') {
+                window.handleRideAllocated(payload);
+            }
             if (window.renderCommunityRideConfirmedBanner) {
                 window.renderCommunityRideConfirmedBanner(payload);
             }

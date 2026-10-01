@@ -793,32 +793,72 @@
         // window.handleDriverStatusUpdate, window.handleStopUpdate, etc.
         // We register the driver-specific handlers below:
 
-        window.handleDemandUpdated = updateDriverDemandUI;
+        window.handleDemandUpdated = (payload) => {
+            updateDriverDemandUI(payload);
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Demand');
+        };
         window.handleServiceAllocationUpdated = (payload) => {
             if (payload) updateDriverDemandUI(payload);
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Service Allocation');
         };
-        window.handleBookingCreated = () => { loadDriverDemandStats('MORNING'); loadDriverCurrentRide(); };
-        window.handleBookingCancelled = () => { loadDriverDemandStats('MORNING'); loadDriverCurrentRide(); };
-        window.handlePoolUpdated = () => { loadDriverCurrentRide(); loadDriverDemandStats('MORNING'); };
-        window.handleFareUpdated = () => { loadDriverCurrentRide(); };
-        window.handleFareFinalized = () => { loadDriverCurrentRide(); };
-        window.handleVehicleAssigned = () => { loadDriverCurrentRide(); loadDriverDemandStats('MORNING'); };
-        window.handleStopUpdate = () => loadDriverCurrentRide();
-        window.handleRideStateUpdate = () => loadDriverCurrentRide();
+        window.handleBookingCreated = (payload) => {
+            loadDriverDemandStats('MORNING');
+            loadDriverCurrentRide();
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Booking Created');
+        };
+        window.handleBookingCancelled = (payload) => {
+            loadDriverDemandStats('MORNING');
+            loadDriverCurrentRide();
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Booking Cancelled');
+        };
+        window.handlePoolUpdated = (payload) => {
+            loadDriverDemandStats('MORNING');
+            loadDriverCurrentRide();
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Pool Updated');
+        };
+        window.handleRideAllocated = (payload) => {
+            loadDriverDemandStats('MORNING');
+            loadDriverCurrentRide();
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Ride Allocated');
+        };
+        window.handleFareUpdated = () => {
+            loadDriverCurrentRide();
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Fare Updated');
+        };
+        window.handleFareFinalized = () => {
+            loadDriverCurrentRide();
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Fare Finalized');
+        };
+        window.handleVehicleAssigned = () => {
+            loadDriverDemandStats('MORNING');
+            loadDriverCurrentRide();
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Vehicle Assigned');
+        };
+        window.handleStopUpdate = () => {
+            loadDriverCurrentRide();
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Stop Update');
+        };
+        window.handleRideStateUpdate = () => {
+            loadDriverCurrentRide();
+            console.log('[SC REALTIME] DRIVER STATE UPDATED: Ride State Update');
+        };
         window.handleDriverStatusUpdate = (payload) => {
             if (payload && currentDriver && payload.driverId === currentDriver.id) {
                 updateDriverStatusUI(payload.status);
+                console.log('[SC REALTIME] DRIVER STATE UPDATED: Driver Status');
             }
         };
         // When passenger marks themselves present/absent → refresh ride UI
         window.handlePassengerMarkedPresent = (payload) => {
             if (currentRide && payload && payload.rideId === currentRide.id) {
                 loadDriverCurrentRide();
+                console.log('[SC REALTIME] DRIVER STATE UPDATED: Passenger Present');
             }
         };
         window.handlePassengerMarkedAbsent = (payload) => {
             if (currentRide && payload && payload.rideId === currentRide.id) {
                 loadDriverCurrentRide();
+                console.log('[SC REALTIME] DRIVER STATE UPDATED: Passenger Absent');
             }
         };
 
