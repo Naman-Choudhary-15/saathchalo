@@ -21,6 +21,8 @@ Thumbs.db
 
 # Production Databases & Persistent Data (NEVER TRACK IN GIT)
 saath-db.json
+saath-db.*.json
+*.backup*.json
 *.db.json
 data/
 backup/
